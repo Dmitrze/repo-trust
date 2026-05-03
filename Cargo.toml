@@ -65,7 +65,7 @@ thiserror = "1.0"
 rusqlite = { version = "0.31", features = ["bundled"] }
 r2d2 = "0.8"
 r2d2_sqlite = "0.24"
-rusqlite_migration = "1.2"
+rusqlite_migration = "2.5"
 
 # Logging
 tracing = "0.1"
