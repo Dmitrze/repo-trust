@@ -13,6 +13,7 @@ pub mod confidence;
 pub mod explain;
 pub mod maintainers;
 pub mod security;
+pub mod stars;
 pub mod thresholds;
 pub mod weights;
 

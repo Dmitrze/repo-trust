@@ -136,6 +136,60 @@ impl Default for AdoptionThresholds {
     }
 }
 
+/// Threshold table for the Star Authenticity module
+/// (`docs/methodology.md` §Module 1, Day-3 shallow cut: Heuristics 1 + 3).
+#[derive(Debug, Clone, Copy)]
+pub struct StarsThresholds {
+    /// Low-activity-share bands (ascending ceiling). For each `(ceiling, score)`,
+    /// a share `≤ ceiling` returns `score`. Maps directly to
+    /// `methodology.md` §Module 1 Heuristic 1.
+    pub low_activity_bands: [(f64, u8); 6],
+    /// Healthy fork/star ratio per methodology.
+    pub fork_to_star_healthy: f64,
+    /// Healthy watcher/star ratio per methodology.
+    pub watcher_to_star_healthy: f64,
+    /// Sample size below which confidence drops to Medium.
+    pub min_sample_for_high_confidence: usize,
+    /// Sample size below which confidence drops to Low.
+    pub min_sample_for_medium_confidence: usize,
+    /// Repo age (days) below which the 5pp leniency applies.
+    pub young_repo_age_days: u64,
+    /// 5pp leniency on the low-activity-share threshold for new repos.
+    pub young_repo_leniency_pp: f64,
+    /// Minimum stars to attempt sampling.
+    pub min_stars_to_sample: u64,
+}
+
+impl StarsThresholds {
+    /// Defaults from `docs/methodology.md` §Module 1 v1.0.
+    #[must_use]
+    pub const fn v1() -> Self {
+        Self {
+            low_activity_bands: [
+                (0.05, 100),
+                (0.10, 85),
+                (0.20, 65),
+                (0.35, 40),
+                (0.50, 20),
+                (1.00, 0),
+            ],
+            fork_to_star_healthy: 0.04,
+            watcher_to_star_healthy: 0.005,
+            min_sample_for_high_confidence: 100,
+            min_sample_for_medium_confidence: 30,
+            young_repo_age_days: 180,
+            young_repo_leniency_pp: 0.05,
+            min_stars_to_sample: 50,
+        }
+    }
+}
+
+impl Default for StarsThresholds {
+    fn default() -> Self {
+        Self::v1()
+    }
+}
+
 /// Linear interpolation: lower input value → higher score (e.g. days
 /// since last commit).
 #[must_use]

@@ -277,6 +277,19 @@ impl Client {
         Ok(Some(text))
     }
 
+    /// `GET /users/{login}` — single user profile. Used by the Star
+    /// Authenticity collector to apply the 9-signal low-activity profile
+    /// per `methodology.md` §Module 1.
+    pub async fn get_user(&self, login: &str) -> Result<UserProfile> {
+        let key = format!("github:users:{login}");
+        let path = format!("/users/{login}");
+        let body = self
+            .fetch_json(&key, &path, None, TTL_REPO_METADATA)
+            .await?;
+        let parsed: UserProfile = serde_json::from_slice(&body).context("parse UserProfile")?;
+        Ok(parsed)
+    }
+
     /// `GET /repos/{owner}/{repo}/contents/{path}` — for doc-presence checks
     /// in the Security module. Returns `Ok(true)` on 200, `Ok(false)` on 404.
     pub async fn file_exists(&self, owner: &str, repo: &str, path: &str) -> Result<bool> {
@@ -523,6 +536,27 @@ pub struct PullMeta {
 pub struct ContributorMeta {
     pub login: String,
     pub contributions: u64,
+    #[serde(default, rename = "type")]
+    pub user_type: Option<String>,
+}
+
+/// Public user profile fields used by the Star Authenticity 9-signal
+/// composite (`methodology.md` §Module 1, Heuristic 1).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UserProfile {
+    pub login: String,
+    #[serde(with = "time::serde::iso8601")]
+    pub created_at: OffsetDateTime,
+    pub followers: u64,
+    pub following: u64,
+    pub public_repos: u64,
+    pub public_gists: u64,
+    #[serde(default)]
+    pub bio: Option<String>,
+    #[serde(default)]
+    pub blog: Option<String>,
+    #[serde(default)]
+    pub email: Option<String>,
     #[serde(default, rename = "type")]
     pub user_type: Option<String>,
 }

@@ -42,6 +42,10 @@ The **scoring model** has its own SemVer separate from the CLI version. See [`do
 - `src/api/github.rs::Client::get_readme` — fetches `/repos/{owner}/{repo}/readme` and base64-decodes the body via a small in-tree decoder (no new runtime crate dep). Returns `Ok(None)` on 404. 4 unit tests cover decode + whitespace + no-padding + invalid-char paths.
 - `RepositoryContext` carries `deps_dev: DepsDevClient` alongside the other federated clients (per ADR-0012); `cli::scan::execute` constructs the client and wires `--api-base-url` overrides.
 
+- Star Authenticity module — shallow Day-3 cut (`src/modules/stars.rs`): collector pulls `Repository` + N stargazers (Quick=0 / Standard=200 / Deep=2000) + per-stargazer profile via new `github::Client::get_user`. Features layer applies the 9-signal low-activity composite per `methodology.md` §Module 1 Heuristic 1 (created_at >2022-01-01, ≤1 follower/following, 0 gists, ≤4 repos, empty bio/blog/email, starred_at == created_at when available) plus fork/star + watcher/star ratios with ecosystem multipliers per `module-specs.md` §Star Authenticity (TS/JS 0.7/0.8, Go 1.1/1.0, Rust 0.9/0.9, etc.). Scorer (`src/scoring/stars.rs`): 6-band table for low-activity-share + linear ratio mapping. **Day-3 formula**: `0.55 × H1 + 0.45 × H3` (lockstep H2 weight redistributed to H3 until Day 4). 5pp leniency on low-activity threshold for repos < 6 months old. Below-floor short-circuit for repos < 50 stars (Low confidence + below_sampling_floor). Verdict ceiling = `Concerning` — never `HighRisk` standalone for Heuristic 1. Probabilistic phrasing only — `"fake"` / `"fraud"` / `"bot"` forbidden. 11 scorer tests + 8 features tests + 1 explicit-language-posture test.
+- `StarsThresholds::v1()` added to `src/scoring/thresholds.rs` (6-band low-activity table, healthy 0.04 fork / 0.005 watcher ratios, sample 100/30 for High/Medium confidence).
+- `github::Client::get_user(login) -> UserProfile` added (24h TTL, `github:users:{login}` cache key).
+
 ### Notes
 - Pre-alpha. APIs and outputs will change before `v1.0.0`. Do not depend on this in production.
 
