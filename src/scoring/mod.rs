@@ -10,6 +10,7 @@ pub mod activity;
 pub mod aggregate;
 pub mod confidence;
 pub mod explain;
+pub mod maintainers;
 pub mod thresholds;
 pub mod weights;
 

@@ -51,6 +51,44 @@ impl Default for ActivityThresholds {
     }
 }
 
+/// Threshold table for the Maintainer Health module
+/// (`docs/methodology.md` §Module 3).
+#[derive(Debug, Clone, Copy)]
+pub struct MaintainerThresholds {
+    /// Bus-factor proxy ≥ this value scores 100. Below, scaled linearly to 0 at 0.
+    pub bus_factor_full_credit: u64,
+    /// Gini ≤ this is "balanced multi-maintainer".
+    pub gini_full_credit: f64,
+    /// Gini ≥ this scores 0 ("highly concentrated").
+    pub gini_zero: f64,
+    /// Retention ≥ this scores 100 (`[0, 1]` rate).
+    pub retention_full_credit: f64,
+    /// Retention ≤ this scores 0.
+    pub retention_zero: f64,
+    pub min_repo_age_for_high_confidence_days: u64,
+}
+
+impl MaintainerThresholds {
+    /// Defaults from `docs/methodology.md` §Module 3 v1.0.
+    #[must_use]
+    pub const fn v1() -> Self {
+        Self {
+            bus_factor_full_credit: 5,
+            gini_full_credit: 0.40,
+            gini_zero: 0.85,
+            retention_full_credit: 0.50,
+            retention_zero: 0.10,
+            min_repo_age_for_high_confidence_days: 180,
+        }
+    }
+}
+
+impl Default for MaintainerThresholds {
+    fn default() -> Self {
+        Self::v1()
+    }
+}
+
 /// Linear interpolation: lower input value → higher score (e.g. days
 /// since last commit).
 #[must_use]

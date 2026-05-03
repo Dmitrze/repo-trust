@@ -25,6 +25,10 @@ repo-trust-reports/
 # MemPalace local memory (NEVER commit)
 .mempalace/
 
+# Claude Code agent worktrees and per-user local settings
+.claude/worktrees/
+.claude/settings.local.json
+
 # Environment / secrets (NEVER commit)
 .env
 .env.local
