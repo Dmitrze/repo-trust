@@ -9,4 +9,5 @@ pub mod github;
 pub mod osv;
 pub mod scorecard;
 
+pub use osv::Client as OsvClient;
 pub use scorecard::Client as ScorecardClient;
