@@ -47,8 +47,9 @@ futures = "0.3"
 reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "rustls-tls", "http2"] }
 url = "2.5"
 
-# GitHub API
-octocrab = "0.39"
+# GitHub API: direct reqwest+serde implementation in src/api/github.rs.
+# We removed octocrab in v0.1 — see chore commit + CLAUDE.md §4. Phase 2
+# may re-add it if/when we need GraphQL for deep stargazer date queries.
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -106,6 +107,9 @@ tempfile = "3.12"
 assert_cmd = "2.0"
 predicates = "3.1"
 criterion = { version = "0.5", features = ["async_tokio"] }
+# `figment` Jail used for hermetic env+file-scoped config tests; gated
+# behind the "test" feature in figment itself.
+figment = { version = "0.10", features = ["toml", "env", "test"] }
 
 # ─── Features ──────────────────────────────────────────────────────────
 [features]

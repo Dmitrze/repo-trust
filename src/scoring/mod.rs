@@ -6,9 +6,12 @@
 //! - All sorting uses explicit keys, never `HashMap` order.
 //! - Sums are performed in deterministic order.
 
+pub mod activity;
 pub mod aggregate;
 pub mod confidence;
 pub mod explain;
+pub mod maintainers;
+pub mod security;
 pub mod thresholds;
 pub mod weights;
 

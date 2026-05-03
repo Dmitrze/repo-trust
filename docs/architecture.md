@@ -63,6 +63,7 @@
 - `collectors` may import from `api`, `storage`, `models`, `utils` — never from `modules` or `scoring`.
 - `scoring` is pure (no I/O). It accepts feature structs and returns score structs.
 - `reports` reads from `models` only — never re-runs collectors.
+- `models` is the type vocabulary; it does **not** depend on `storage` or `api` for any leaf type. **Exception:** `RepositoryContext` carries runtime handles (`Cache`, `GithubClient`, `ScorecardClient`, `OsvClient`, `DepsDevClient`) for v1 — see [ADR-0012](adr/0012-repository-context-runtime-handles.md). Post-v1.0 forward path: split into `runtime::RunContext` if a second consumer of `models` ever appears.
 
 ---
 
@@ -78,7 +79,7 @@
 
 **Type system** — sum types (`enum`) + exhaustive matching make the Trust Module contract genuinely safe to extend. The five v1 modules and any future plugins get compile-time guarantees about completeness.
 
-**Ecosystem** — `octocrab` (GitHub API), `reqwest` + `tokio` (async HTTP), `serde` (zero-cost JSON), `clap` v4 (CLI), `rusqlite` + `r2d2` (cache), `tracing` (structured logs), `insta` (snapshot tests). All actively maintained, all production-grade.
+**Ecosystem** — `reqwest` + `tokio` (async HTTP, with our own thin client over the GitHub REST API in `src/api/github.rs`), `serde` (zero-cost JSON), `clap` v4 (CLI), `rusqlite` + `r2d2` (cache), `tracing` (structured logs), `insta` (snapshot tests). All actively maintained, all production-grade.
 
 ### Why not Go?
 OpenSSF Scorecard and deps.dev are written in Go. We considered it. Go's `go install` distribution is excellent. We chose Rust because: (1) memory safety hard guarantee matters for a security-adjacent tool, (2) sum-type-driven module contracts are stronger than Go interfaces, (3) `cargo` ergonomics > Go modules for application crates, (4) we want the "modern dev-tool" perception that the 2026 Rust CLI generation has earned.
@@ -95,7 +96,7 @@ Python is slower per request, requires a runtime on user machines, has weaker st
 | Terminal output | `indicatif` + `console` + `comfy-table` | Progress bars, colored output, tables |
 | Async runtime | `tokio` (full features) | Required by `reqwest`, `axum`, most async libraries |
 | HTTP client | `reqwest` (`json`, `gzip`, `rustls-tls` features) | Async, ergonomic, supports HTTP/2 and ETag |
-| GitHub API | `octocrab` | Maintained Rust client for GitHub REST + GraphQL |
+| GitHub API | direct `reqwest` + `serde` (`src/api/github.rs`) | Cache + ETag lifecycle is core; a thin in-house client is simpler than wrapping a third-party SDK. Phase 2 may re-introduce `octocrab` if GraphQL for `starredAt` becomes necessary. |
 | Schemas / serialization | `serde`, `serde_json`, `serde_with` | Zero-cost serialization; JSON Schema generation via `schemars` |
 | Error handling | `thiserror` (libraries) + `anyhow` (binaries) | Standard split; rich error context |
 | Storage | `rusqlite` + `r2d2` + `r2d2_sqlite` | Embedded, zero-config; pooled connections for batch mode |
@@ -187,7 +188,7 @@ repo-trust/
 │   ├── api/
 │   │   ├── mod.rs
 │   │   ├── client.rs             # shared reqwest client, retry, ETag
-│   │   ├── github.rs             # GitHub REST + GraphQL via octocrab
+│   │   ├── github.rs             # GitHub REST via direct reqwest + serde + cache+ETag layer
 │   │   ├── deps_dev.rs           # deps.dev API client
 │   │   ├── scorecard.rs          # scorecard.dev API client
 │   │   └── osv.rs                # OSV.dev API client

@@ -25,7 +25,15 @@ pub fn run() -> anyhow::Result<u8> {
 
     runtime.block_on(async move {
         match cli.command {
-            Command::Scan(args) => scan::execute(args).await,
+            Command::Scan(args) => match scan::execute(args).await {
+                Ok(code) => Ok(code),
+                Err(e) => {
+                    let code = scan::exit_code_for(&e);
+                    tracing::error!(error = ?e, exit_code = code, "scan failed");
+                    eprintln!("error: {e:#}");
+                    Ok(code)
+                },
+            },
             Command::Batch(args) => batch::execute(args).await,
             Command::Explain(args) => explain::execute(args).await,
             #[cfg(feature = "web")]

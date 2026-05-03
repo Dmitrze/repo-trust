@@ -42,6 +42,7 @@ What else did we look at and why did we reject it?
 | [0009](0009-license-apache-2.md) | License: Apache-2.0 with CC-BY-4.0 for methodology | Accepted |
 | [0010](0010-plugin-system-deferred.md) | Plugin system deferred to v1.2 | Accepted |
 | [0011](0011-module-trait-shipped-shape.md) | TrustModule trait: shipped object-safe `run()` shape | Accepted |
+| [0012](0012-repository-context-runtime-handles.md) | RepositoryContext carries runtime handles for v1 | Accepted |
 
 ## When to add a new ADR
 
