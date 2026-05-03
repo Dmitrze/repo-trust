@@ -41,6 +41,7 @@ What else did we look at and why did we reject it?
 | [0008](0008-confidence-separate-from-score.md) | Confidence is independent of score | Accepted |
 | [0009](0009-license-apache-2.md) | License: Apache-2.0 with CC-BY-4.0 for methodology | Accepted |
 | [0010](0010-plugin-system-deferred.md) | Plugin system deferred to v1.2 | Accepted |
+| [0011](0011-module-trait-shipped-shape.md) | TrustModule trait: shipped object-safe `run()` shape | Accepted |
 
 ## When to add a new ADR
 
