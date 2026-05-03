@@ -3,6 +3,7 @@ use time::OffsetDateTime;
 
 use super::scores::ModuleWeights;
 use crate::cli::scan::Mode as CliMode;
+use crate::storage::Cache;
 
 /// Public-facing repository summary in the report.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,7 +20,8 @@ pub struct RepositorySummary {
 
 /// Internal context shared across the run.
 ///
-/// Not serialised — holds API clients, cache handles, etc.
+/// Not serialised — holds API clients, cache handles, etc. Cheap to clone;
+/// the [`Cache`] is `Arc`-internal via r2d2.
 #[derive(Debug, Clone)]
 pub struct RepositoryContext {
     pub full_name: String,
@@ -29,4 +31,5 @@ pub struct RepositoryContext {
     pub weights: ModuleWeights,
     pub rng_seed: u64,
     pub snapshot_at: OffsetDateTime,
+    pub cache: Cache,
 }

@@ -1,6 +1,11 @@
 //! Local SQLite-backed cache.
 //!
-//! See ADR-0003 for the rationale and `docs/architecture.md` §6 for the schema.
+//! See [`docs/architecture.md` §6](../../docs/architecture.md) for the full
+//! schema and TTL policy. The cache exposes three tables — `api_cache`,
+//! `features`, `reports` — through the [`Cache`] facade, plus a
+//! [`migrations`] module that runs schema migrations on first connection.
 
 pub mod cache;
 pub mod migrations;
+
+pub use cache::{Cache, CacheInfo, CachedEntry};

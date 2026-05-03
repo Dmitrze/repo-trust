@@ -16,6 +16,9 @@ The **scoring model** has its own SemVer separate from the CLI version. See [`do
 - Repository structure for Rust CLI implementation
 - Five-module trust framework definition: Star Authenticity, Activity Health, Maintainer Health, Adoption Signals, Security & Readiness
 - Federation strategy with OpenSSF Scorecard, deps.dev, OSV (consume, do not replicate)
+- ADR-0011: TrustModule trait shipped object-safe `run()` shape (locks the v1 trait surface).
+- Spec-first scaffolding: `specs/{cache-layer,config-loader,github-api-client,activity-health-module}.md` with paired `tests/scenarios/`.
+- Storage layer: r2d2-pooled SQLite cache (`src/storage/cache.rs`), schema migrations via `rusqlite_migration` (`src/storage/migrations/0001_initial.sql`), 0600 file perms on Unix, `Cache` handle threaded into `RepositoryContext`.
 
 ### Notes
 - Pre-alpha. APIs and outputs will change before `v1.0.0`. Do not depend on this in production.
