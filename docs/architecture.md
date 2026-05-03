@@ -279,42 +279,32 @@ repo-trust/
 
 ## 4. Module Contract
 
-Every scoring module implements the same trait so that adding a new module is mechanical.
+Every scoring module implements the same object-safe trait so that adding a new module is mechanical and the registry can hold them as `Vec<Box<dyn TrustModule>>` without erasure overhead.
 
 ```rust
 use async_trait::async_trait;
 
 use crate::models::{ModuleResult, EvidenceItem, RepositoryContext};
 
-/// A scoring module. Five live in v1; plugins can register more.
+/// A scoring module. Five live in v1; plugins can register more (post-v1.2; see ADR-0010).
 #[async_trait]
 pub trait TrustModule: Send + Sync {
     /// Stable identifier, e.g. "stars", "activity".
     fn name(&self) -> &'static str;
 
-    /// SemVer of this module's scoring logic.
+    /// SemVer of this module's scoring logic. Bumped on threshold or weight changes.
     fn version(&self) -> &'static str;
 
-    /// Pull raw data from APIs (cached) and return a raw-data struct.
-    async fn collect(&self, ctx: &RepositoryContext) -> anyhow::Result<RawData>;
-
-    /// Normalize raw → feature struct. Pure function.
-    fn compute_features(&self, raw: &RawData, ctx: &RepositoryContext) -> Features;
-
-    /// Apply thresholds, return score 0–100, confidence, sub-scores.
-    fn score(&self, features: &Features, ctx: &RepositoryContext) -> ModuleResult;
-
-    /// Emit human-readable evidence items for the report.
-    fn explain(
+    /// Run the full collect → features → score → explain pipeline, returning the
+    /// module's result and its evidence items.
+    async fn run(
         &self,
-        features: &Features,
-        result: &ModuleResult,
         ctx: &RepositoryContext,
-    ) -> Vec<EvidenceItem>;
+    ) -> anyhow::Result<(ModuleResult, Vec<EvidenceItem>)>;
 }
 ```
 
-In real code this is split across two parts: a generic `TrustModule<RawData, Features>` GAT-style trait that each module implements with concrete types, and an object-safe `dyn DynTrustModule` registry trait that erases the types for the orchestrator. This pattern is standard in 2026 Rust and is documented in `docs/adr/0006-module-trait-design.md`.
+The four pipeline stages (`collect`, `compute_features`, `score`, `explain`) live as plain functions in `src/collectors/<module>.rs`, `src/features/<module>.rs`, and `src/modules/<module>.rs`. Each stage is independently testable; the trait `run()` body is conventionally a four-line wiring of the stages. This shape is documented in `docs/adr/0011-module-trait-shipped-shape.md` along with the rationale for choosing the simpler object-safe trait over a GAT-split design.
 
 ### Module registry
 
