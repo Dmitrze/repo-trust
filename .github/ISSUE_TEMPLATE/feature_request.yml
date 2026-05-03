@@ -1,0 +1,59 @@
+name: ✨ Feature request
+description: Suggest a new capability or improvement
+labels: [feature, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. We will not commit to building every requested feature — but the issue tracker is the right place to make the case.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the user pain or use case, not the proposed solution yet.
+      placeholder: "When I'm evaluating a Rust crate, I currently have to ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you build? CLI flag, new module, new output format, ...?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about and rejected.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Rough scope estimate
+      description: Your guess; we'll re-estimate during triage.
+      options:
+        - "Small (a few hours)"
+        - "Medium (a day or two)"
+        - "Large (a week+)"
+        - "I have no idea"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: prior-art
+    attributes:
+      label: Prior art
+      options:
+        - label: I searched existing issues and discussions before filing this.
+          required: true
+        - label: I have read the [PRD](https://github.com/Dmitrze/repo-trust/blob/main/docs/PRD.md) and confirmed this isn't already on the roadmap.
+          required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context

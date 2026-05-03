@@ -1,55 +1,55 @@
-## What & why
+## Summary
 
-<!-- One-paragraph description of what this PR changes and why. Link to the issue or discussion if one exists. -->
-
-Closes #
-
----
+<!-- One or two sentences: what does this PR do, and why? -->
 
 ## Type of change
 
-- [ ] feat — user-visible behavior change (new feature, new flag, new module)
-- [ ] fix — bug fix
-- [ ] docs — documentation only
-- [ ] refactor — internal restructuring, no behavior change
-- [ ] test — adding or improving tests
-- [ ] chore — dependencies, CI, tooling
-- [ ] perf — performance improvement
+<!-- Check all that apply -->
 
-## Scope of change
+- [ ] Bug fix (non-breaking change that fixes an issue)
+- [ ] New feature (non-breaking change that adds functionality)
+- [ ] Breaking change (fix or feature that changes existing behavior)
+- [ ] Scoring change (changes module weights, thresholds, or scoring logic)
+- [ ] Documentation update
+- [ ] Refactor (no behavior change)
+- [ ] CI / build / tooling
 
-- [ ] Touches scoring weights or thresholds (requires `docs/scoring-model.md` bump)
-- [ ] Changes the JSON report schema (requires `schema_version` bump)
-- [ ] Adds a new runtime crate (justify in description)
-- [ ] Adds a new public function or CLI flag (requires docs)
-- [ ] Adds a new module (requires ADR)
+## Linked issue(s)
 
----
+<!-- e.g. Closes #123, Fixes #456 -->
 
-## Verification
+## How was this verified?
 
-- [ ] `cargo fmt --check` passes
-- [ ] `cargo clippy --all-targets --all-features -- -D warnings` passes
-- [ ] `cargo test` passes
-- [ ] If applicable: `cargo insta review` ran and snapshot changes are intentional
-- [ ] If applicable: regression test added for the bug being fixed
-- [ ] Manual smoke test against a real repo (paste command + summary of output below)
+<!-- Concrete steps a reviewer can run to confirm. "Ran cargo test" is not enough. -->
 
-```
-# Paste the command and a short excerpt of the output here.
+```bash
+# example
+cargo test --all-features
+repo-trust scan octocat/Hello-World --mode quick
 ```
 
----
+## Screenshots / output (if relevant)
+
+<!-- Terminal output, JSON snippets, before/after screenshots -->
 
 ## Risks
 
-<!-- What could go wrong because of this change? E.g. "changes confidence calculation; could shift scores by ±2 across the benchmark set". If you don't know of any risks, write "None known." -->
+<!-- What could break? Who is affected? Is there a rollback path? -->
 
----
+## Checklist
 
-## For reviewers
+- [ ] Branch is rebased onto current `main`.
+- [ ] `cargo fmt --all -- --check` passes.
+- [ ] `cargo clippy --all-targets --all-features -- -D warnings` passes.
+- [ ] `cargo test --all-features` passes.
+- [ ] Added tests for new behavior, regression test for bug fixes.
+- [ ] Public items have rustdoc comments.
+- [ ] Updated `CHANGELOG.md` under `[Unreleased]`.
+- [ ] If scoring changed: bumped scoring version in `docs/scoring-model.md`.
+- [ ] If JSON schema changed: bumped `schema_version` and noted migration.
+- [ ] No new runtime dependencies, or justified the addition above.
+- [ ] No secrets, tokens, or PII in the diff.
 
-- [ ] Reviewed against the relevant `docs/methodology.md` section
-- [ ] Determinism preserved (no new `HashMap` ordering dependencies in serialized output)
-- [ ] No new outbound network calls beyond documented APIs
-- [ ] No secrets or tokens in the diff
+## Notes for reviewer
+
+<!-- Anything specific you want the reviewer to look at? Areas of uncertainty? -->

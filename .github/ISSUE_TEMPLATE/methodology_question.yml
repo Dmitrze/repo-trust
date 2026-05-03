@@ -1,0 +1,84 @@
+name: 🧭 Methodology question
+description: Disagree with how a repo was scored, or have a methodology critique
+labels: [methodology, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Methodology disputes are how this project gets better. We will not remove a score because someone disagrees — but we will absolutely refine our methodology if there's a credible critique.
+
+        Please be specific. "My repo's score is too low" is not actionable. "The Activity Health module penalizes monthly-release projects too aggressively because ___" is.
+
+  - type: input
+    id: repo
+    attributes:
+      label: Repository scored
+      description: "owner/repo or full URL"
+      placeholder: "octocat/Hello-World"
+    validations:
+      required: true
+
+  - type: input
+    id: score
+    attributes:
+      label: Score received
+      placeholder: "e.g. Trust: 42, Activity Health: 18"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Which module is in question?
+      options:
+        - Star Authenticity
+        - Activity Health
+        - Maintainer Health
+        - Adoption Signals
+        - Security & Readiness
+        - Overall aggregation
+        - Confidence calculation
+        - Other / cross-cutting
+    validations:
+      required: true
+
+  - type: textarea
+    id: critique
+    attributes:
+      label: Why do you disagree?
+      description: Be concrete. Reference specific evidence items from the report.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting evidence
+      description: Counter-data, benchmark comparisons, links to ecosystem norms, ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed methodology change (optional)
+      description: If you have a concrete fix in mind, describe it here.
+
+  - type: dropdown
+    id: relationship
+    attributes:
+      label: Your relationship to the repo (for context only — doesn't change weight)
+      options:
+        - I am the maintainer / a contributor
+        - I depend on this repo (consumer)
+        - I'm researching it for diligence
+        - No relationship
+    validations:
+      required: true
+
+  - type: textarea
+    id: report
+    attributes:
+      label: Full JSON report
+      description: Attach the full JSON output (redacted of any sensitive details).
+      render: json

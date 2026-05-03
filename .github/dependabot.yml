@@ -1,53 +1,61 @@
-# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 updates:
   # Rust crates
-  - package-ecosystem: "cargo"
+  - package-ecosystem: cargo
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: weekly
+      day: monday
       time: "06:00"
-      timezone: "Europe/Warsaw"
+      timezone: "Etc/UTC"
     open-pull-requests-limit: 10
     labels:
-      - "dependencies"
-      - "rust"
+      - dependencies
+      - rust
     commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
+      prefix: chore
+      prefix-development: chore
+      include: scope
     groups:
-      # Bundle minor/patch bumps so we don't drown in PRs
-      patch-and-minor:
-        update-types:
-          - "patch"
-          - "minor"
+      tokio-stack:
+        patterns:
+          - "tokio*"
+          - "async-trait"
+          - "futures*"
+      serde-stack:
+        patterns:
+          - "serde*"
+          - "schemars"
+      tracing-stack:
+        patterns:
+          - "tracing*"
+      cli-stack:
+        patterns:
+          - "clap*"
+          - "console"
+          - "indicatif"
+          - "comfy-table"
+      web-stack:
+        patterns:
+          - "axum"
+          - "tower-http"
+          - "askama"
+          - "rust-embed"
+      dev-tools:
+        dependency-type: development
 
-  # GitHub Actions used in workflows
-  - package-ecosystem: "github-actions"
+  # GitHub Actions
+  - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: weekly
+      day: monday
       time: "06:00"
-      timezone: "Europe/Warsaw"
+      timezone: "Etc/UTC"
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
-      - "github-actions"
+      - dependencies
+      - github-actions
     commit-message:
-      prefix: "chore(actions)"
-      include: "scope"
-
-  # Docker base image for the published container
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 3
-    labels:
-      - "dependencies"
-      - "docker"
-    commit-message:
-      prefix: "chore(docker)"
-      include: "scope"
+      prefix: ci
+      include: scope
