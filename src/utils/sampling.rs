@@ -16,7 +16,11 @@ pub fn derive_seed(repo: &str, scoring_version: &str) -> u64 {
     hasher.update(scoring_version.as_bytes());
     let hash = hasher.finalize();
     let bytes = hash.as_bytes();
-    u64::from_le_bytes(bytes[..8].try_into().expect("blake3 always returns 32 bytes"))
+    u64::from_le_bytes(
+        bytes[..8]
+            .try_into()
+            .expect("blake3 always returns 32 bytes"),
+    )
 }
 
 /// Sample without replacement from a slice using a seeded ChaCha20 RNG.

@@ -5,7 +5,7 @@ use std::time::Duration;
 use reqwest::Client;
 
 /// Build the project-wide HTTP client.
- pub fn build() -> reqwest::Result<Client> {
+pub fn build() -> reqwest::Result<Client> {
     Client::builder()
         .user_agent(format!(
             "repo-trust/{} (+https://github.com/Dmitrze/repo-trust)",

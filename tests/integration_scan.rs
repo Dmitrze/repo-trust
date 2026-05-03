@@ -60,5 +60,8 @@ fn completions_bash_outputs_completion_script() {
     let output = cmd.args(["completions", "bash"]).output().unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("repo-trust"), "bash completion script should mention the binary name");
+    assert!(
+        stdout.contains("repo-trust"),
+        "bash completion script should mention the binary name"
+    );
 }

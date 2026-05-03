@@ -26,7 +26,10 @@ pub trait TrustModule: Send + Sync {
 
     /// Run collect → features → score, returning the module's result
     /// and its evidence items.
-    async fn run(&self, ctx: &RepositoryContext) -> anyhow::Result<(ModuleResult, Vec<EvidenceItem>)>;
+    async fn run(
+        &self,
+        ctx: &RepositoryContext,
+    ) -> anyhow::Result<(ModuleResult, Vec<EvidenceItem>)>;
 }
 
 /// Build the registry of all built-in modules.

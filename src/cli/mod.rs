@@ -40,7 +40,7 @@ pub fn run() -> anyhow::Result<u8> {
                     crate::SCORING_VERSION
                 );
                 Ok(0)
-            }
+            },
         }
     })
 }

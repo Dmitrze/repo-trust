@@ -10,10 +10,17 @@ pub struct ActivityModule;
 
 #[async_trait]
 impl TrustModule for ActivityModule {
-    fn name(&self) -> &'static str { "activity" }
-    fn version(&self) -> &'static str { "1.0.0" }
+    fn name(&self) -> &'static str {
+        "activity"
+    }
+    fn version(&self) -> &'static str {
+        "1.0.0"
+    }
 
-    async fn run(&self, _ctx: &RepositoryContext) -> anyhow::Result<(ModuleResult, Vec<EvidenceItem>)> {
+    async fn run(
+        &self,
+        _ctx: &RepositoryContext,
+    ) -> anyhow::Result<(ModuleResult, Vec<EvidenceItem>)> {
         anyhow::bail!("activity module: not yet implemented")
     }
 }

@@ -14,7 +14,7 @@ fn main() -> std::process::ExitCode {
             tracing::error!(error = ?err, "unhandled error");
             eprintln!("error: {err:#}");
             1
-        }
+        },
     };
 
     std::process::ExitCode::from(exit_code)

@@ -14,7 +14,8 @@ pub fn parse(input: &str) -> anyhow::Result<String> {
         }
     }
 
-    let url = url::Url::parse(trimmed).with_context(|| format!("could not parse '{trimmed}' as URL"))?;
+    let url =
+        url::Url::parse(trimmed).with_context(|| format!("could not parse '{trimmed}' as URL"))?;
 
     let host = url.host_str().ok_or_else(|| anyhow!("URL has no host"))?;
     if !host.eq_ignore_ascii_case("github.com") && !host.eq_ignore_ascii_case("www.github.com") {
