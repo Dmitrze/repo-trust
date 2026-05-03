@@ -1,0 +1,15 @@
+# Sample input file for `repo-trust batch`.
+# One owner/repo per line. Lines beginning with # are ignored.
+# Empty lines are ignored.
+
+# A small, intentionally diverse mix:
+rust-lang/rust
+tokio-rs/tokio
+facebook/react
+vercel/next.js
+django/django
+numpy/numpy
+golang/go
+kubernetes/kubernetes
+openssh/openssh-portable
+sqlite/sqlite

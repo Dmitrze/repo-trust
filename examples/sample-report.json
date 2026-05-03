@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0.0",
+  "repository": {
+    "full_name": "octocat/Hello-World",
+    "url": "https://github.com/octocat/Hello-World",
+    "default_branch": "main",
+    "primary_language": "Rust",
+    "stars": 12345,
+    "snapshot_at": "2026-05-15T10:00:00Z"
+  },
+  "overall_score": 73,
+  "overall_confidence": "Medium",
+  "category": "Good",
+  "mode": "standard",
+  "modules": [
+    {
+      "module": "stars",
+      "score": 81,
+      "confidence": "High",
+      "sub_scores": {
+        "low_activity_share": 75,
+        "lockstep_timing": 90,
+        "ratios": 78
+      },
+      "sample_size": 200,
+      "missing_data": []
+    },
+    {
+      "module": "activity",
+      "score": 68,
+      "confidence": "High",
+      "sub_scores": {
+        "days_since_last_commit": 92,
+        "commits_last_90d": 60,
+        "active_contributors": 75,
+        "issue_response": 50,
+        "release_cadence": 65
+      },
+      "sample_size": null,
+      "missing_data": []
+    },
+    {
+      "module": "maintainers",
+      "score": 54,
+      "confidence": "Medium",
+      "sub_scores": {
+        "bus_factor_proxy": 50,
+        "commit_gini": 45,
+        "retention": 65
+      },
+      "sample_size": null,
+      "missing_data": []
+    },
+    {
+      "module": "adoption",
+      "score": 88,
+      "confidence": "High",
+      "sub_scores": {
+        "weekly_downloads": 92,
+        "github_dependents": 85,
+        "doc_maturity": 80
+      },
+      "sample_size": null,
+      "missing_data": []
+    },
+    {
+      "module": "security",
+      "score": 71,
+      "confidence": "Medium",
+      "sub_scores": {
+        "scorecard": 70,
+        "osv_open_advisories": 80,
+        "docs_present": 90,
+        "ci_present": 60
+      },
+      "sample_size": null,
+      "missing_data": ["branch_protection"]
+    }
+  ],
+  "evidence": [
+    {
+      "module": "stars",
+      "code": "low_activity_stargazer_share",
+      "label": "Share of low-activity stargazer accounts",
+      "value": 0.082,
+      "threshold": 0.20,
+      "verdict": "Positive",
+      "rationale": "8.2% of sampled stargazers match the low-activity profile, well below the 20% concern threshold."
+    },
+    {
+      "module": "maintainers",
+      "code": "bus_factor_proxy",
+      "label": "Bus factor proxy (authors covering 50% of last-year commits)",
+      "value": 2,
+      "threshold": 3,
+      "verdict": "Concerning",
+      "rationale": "Two authors cover 50% of last-year commits; long-term continuity depends on either of them."
+    },
+    {
+      "module": "adoption",
+      "code": "weekly_downloads",
+      "label": "Weekly package downloads (sum across registries)",
+      "value": 240000,
+      "threshold": null,
+      "verdict": "Positive",
+      "rationale": "240k weekly downloads is meaningful real-world usage."
+    },
+    {
+      "module": "security",
+      "code": "branch_protection_unknown",
+      "label": "Branch protection status",
+      "value": null,
+      "threshold": null,
+      "verdict": "Neutral",
+      "rationale": "Branch protection requires a token with admin scope to read; not available with this run."
+    }
+  ],
+  "top_strengths": [
+    {
+      "module": "adoption",
+      "code": "weekly_downloads",
+      "label": "Weekly package downloads (sum across registries)",
+      "value": 240000,
+      "threshold": null,
+      "verdict": "Positive",
+      "rationale": "240k weekly downloads is meaningful real-world usage."
+    },
+    {
+      "module": "stars",
+      "code": "low_activity_stargazer_share",
+      "label": "Share of low-activity stargazer accounts",
+      "value": 0.082,
+      "threshold": 0.20,
+      "verdict": "Positive",
+      "rationale": "8.2% of sampled stargazers match the low-activity profile, well below the 20% concern threshold."
+    }
+  ],
+  "top_concerns": [
+    {
+      "module": "maintainers",
+      "code": "bus_factor_proxy",
+      "label": "Bus factor proxy (authors covering 50% of last-year commits)",
+      "value": 2,
+      "threshold": 3,
+      "verdict": "Concerning",
+      "rationale": "Two authors cover 50% of last-year commits; long-term continuity depends on either of them."
+    }
+  ],
+  "caveats": [
+    "Stargazer sample limited to 200 due to API rate limit",
+    "Branch protection status unavailable without admin-scoped token"
+  ],
+  "scoring_version": "1.0.0",
+  "weights_used": {
+    "stars": 0.20,
+    "activity": 0.25,
+    "maintainers": 0.20,
+    "adoption": 0.20,
+    "security": 0.15
+  },
+  "snapshot_at": "2026-05-15T10:00:00Z",
+  "runtime_seconds": 12.3
+}

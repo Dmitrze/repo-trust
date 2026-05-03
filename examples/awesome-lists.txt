@@ -1,0 +1,24 @@
+# Awesome-lists used as adoption signals (Module 4).
+#
+# These are well-known curated GitHub lists in their respective ecosystems.
+# A repo's mention in any of these contributes to its `awesome_list_mentions`
+# count.
+#
+# Format: one URL per line. Lines beginning with # are ignored.
+# Edit only via PR with rationale; this list affects scoring.
+
+https://github.com/sindresorhus/awesome
+https://github.com/avelino/awesome-go
+https://github.com/rust-unofficial/awesome-rust
+https://github.com/vinta/awesome-python
+https://github.com/sorrycc/awesome-javascript
+https://github.com/akullpp/awesome-java
+https://github.com/markets/awesome-ruby
+https://github.com/uhub/awesome-c
+https://github.com/fffaraz/awesome-cpp
+https://github.com/uhub/awesome-typescript
+https://github.com/Awesome-Windows/Awesome
+https://github.com/jaywcjlove/awesome-mac
+https://github.com/awesome-foss/awesome-sysadmin
+https://github.com/sindresorhus/awesome-nodejs
+https://github.com/topics/awesome
