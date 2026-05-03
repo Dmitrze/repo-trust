@@ -11,6 +11,8 @@ use time::OffsetDateTime;
 
 use crate::api::github::Client as GhClient;
 use crate::api::github::GithubError;
+use crate::api::osv::Client as OsvClient;
+use crate::api::scorecard::Client as ScorecardClient;
 use crate::config;
 use crate::models::{
     Category, ModuleResult, ModuleWeights, RepositoryContext, RepositorySummary, TrustReport,
@@ -148,12 +150,18 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
         tracing::info!(invalidated = n, "cache invalidated for repo");
     }
 
-    // ─── HTTP / GitHub client ─────────────────────────────────────────
+    // ─── HTTP / federated clients ────────────────────────────────────
     let http = crate::api::client::build()?;
     let limiter = RateLimiter::default();
-    let mut github = GhClient::new(http, cache.clone(), limiter, token);
+    let mut github = GhClient::new(http.clone(), cache.clone(), limiter, token);
+    let mut scorecard = ScorecardClient::new(http.clone(), cache.clone());
+    let mut osv = OsvClient::new(http.clone(), cache.clone());
     if let Some(base) = args.api_base_url.as_deref() {
         github = github.with_base_url(base);
+        // The same wiremock server hosts the federated mocks in tests; in
+        // production the federated clients hit their real endpoints.
+        scorecard = scorecard.with_base_url(base);
+        osv = osv.with_base_url(base);
     }
 
     // ─── Scoring version + seed ────────────────────────────────────────
@@ -178,6 +186,8 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
         snapshot_at,
         cache,
         github: github.clone(),
+        scorecard,
+        osv,
     };
 
     // ─── Run modules ──────────────────────────────────────────────────
@@ -187,22 +197,31 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
     let mut module_results: Vec<ModuleResult> = Vec::new();
     let mut all_evidence = Vec::new();
 
+    use crate::modules::TrustModule;
     for name in &selected {
-        match name.as_str() {
+        let result = match name.as_str() {
             "activity" => {
-                use crate::modules::TrustModule;
-                let module = crate::modules::activity::ActivityModule;
-                let (r, ev) = module
-                    .run(&ctx)
-                    .await
-                    .with_context(|| format!("module '{name}' failed"))?;
-                module_results.push(r);
-                all_evidence.extend(ev);
+                let m = crate::modules::activity::ActivityModule;
+                Some(m.run(&ctx).await)
             },
-            // Other modules return `not yet implemented` until Day 2/3.
+            "maintainers" => {
+                let m = crate::modules::maintainers::MaintainersModule;
+                Some(m.run(&ctx).await)
+            },
+            "security" => {
+                let m = crate::modules::security::SecurityModule;
+                Some(m.run(&ctx).await)
+            },
+            // Stars + Adoption land Day 3.
             other => {
                 tracing::debug!(module = other, "skipping (not yet wired)");
+                None
             },
+        };
+        if let Some(res) = result {
+            let (r, ev) = res.with_context(|| format!("module '{name}' failed"))?;
+            module_results.push(r);
+            all_evidence.extend(ev);
         }
     }
 
@@ -294,8 +313,12 @@ fn mode_label(m: Mode) -> &'static str {
 }
 
 fn select_modules(enabled: Option<&Vec<String>>, skipped: Option<&Vec<String>>) -> Vec<String> {
-    // Default Phase-1 set; once Day 2/3 wire more modules, this expands.
-    let default_set = vec!["activity".to_string()];
+    // Day 2 default set: 3 modules wired end-to-end. Stars + Adoption land Day 3.
+    let default_set = vec![
+        "activity".to_string(),
+        "maintainers".to_string(),
+        "security".to_string(),
+    ];
     let mut selected: Vec<String> = match enabled {
         Some(list) if !list.is_empty() => list.clone(),
         _ => default_set,

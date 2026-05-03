@@ -96,8 +96,11 @@ async fn s001_inactive_repo_scores_low() {
     let dir = tempfile::tempdir().unwrap();
     let cache = Cache::open(dir.path().join("cache.db")).unwrap();
     let http = reqwest::Client::builder().build().unwrap();
-    let github =
-        GhClient::new(http, cache.clone(), RateLimiter::new(10), None).with_base_url(server.uri());
+    let github = GhClient::new(http.clone(), cache.clone(), RateLimiter::new(10), None)
+        .with_base_url(server.uri());
+    let scorecard = repo_trust::api::scorecard::Client::new(http.clone(), cache.clone())
+        .with_base_url(server.uri());
+    let osv = repo_trust::api::osv::Client::new(http, cache.clone()).with_base_url(server.uri());
 
     let ctx = RepositoryContext {
         full_name: "octocat/Hello-World".into(),
@@ -113,6 +116,8 @@ async fn s001_inactive_repo_scores_low() {
         .unwrap(),
         cache,
         github,
+        scorecard,
+        osv,
     };
 
     let module = repo_trust::modules::activity::ActivityModule;

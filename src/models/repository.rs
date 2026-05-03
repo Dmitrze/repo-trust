@@ -3,6 +3,8 @@ use time::OffsetDateTime;
 
 use super::scores::ModuleWeights;
 use crate::api::github::Client as GithubClient;
+use crate::api::osv::Client as OsvClient;
+use crate::api::scorecard::Client as ScorecardClient;
 use crate::cli::scan::Mode as CliMode;
 use crate::storage::Cache;
 
@@ -22,7 +24,8 @@ pub struct RepositorySummary {
 /// Internal context shared across the run.
 ///
 /// Not serialised — holds API clients, cache handles, etc. Cheap to clone;
-/// the [`Cache`] and [`GithubClient`] are `Arc`-internal.
+/// every handle is `Arc`-internal. See ADR-0012 for the rationale on
+/// carrying runtime handles directly on a `models` struct.
 #[derive(Debug, Clone)]
 pub struct RepositoryContext {
     pub full_name: String,
@@ -34,6 +37,8 @@ pub struct RepositoryContext {
     pub snapshot_at: OffsetDateTime,
     pub cache: Cache,
     pub github: GithubClient,
+    pub scorecard: ScorecardClient,
+    pub osv: OsvClient,
 }
 
 impl RepositoryContext {
