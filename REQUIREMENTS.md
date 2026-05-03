@@ -1,56 +1,84 @@
-# <PROJECT_NAME> — Development Requirements
+# Repo Trust — Development Requirements
 
-Everything you need to run, build, and contribute to <PROJECT_NAME>.
-
-> **Template note:** the items in `<ANGLE_BRACKETS>` are placeholders. Fill them on first use of this template against a new project.
+Everything you need to run, build, and contribute to Repo Trust.
 
 ---
 
 ## 1. System requirements
 
-- **macOS 13+**, **Linux**, or **Windows with WSL2** (native Windows untested).
-- **<runtime: Node.js 20 LTS / Python 3.11 / Go 1.22 / Rust stable / etc.>**.
-- **<package manager: pnpm 8+ / uv / cargo / etc.>**.
-- **Python 3.9+** (for MemPalace local memory layer — even if you only run `mempalace` via its CLI).
-- **git 2.40+**.
-- A **GitHub** account with access to `<owner>/<repo>` (private repo).
+- **macOS 13+**, **Linux** (glibc 2.31+), or **Windows 11** (native or WSL2).
+- **Rust** stable 1.75 or newer (install via [rustup](https://rustup.rs/)).
+- **Git** 2.40+.
+- **Python 3.9+** — only required if you use **MemPalace** as a developer tool. Not required to build, test, or run `repo-trust` itself.
+- A **GitHub account** with read access to `Dmitrze/repo-trust`.
 
 ### Required third-party service accounts
 
-<List the services this project uses. Common starters below; remove what doesn't apply.>
-
 | Service | Purpose | Where to get keys |
-|---|---|---|
-| <Supabase> | Postgres, Auth, Edge Functions, Storage | https://supabase.com/dashboard |
-| <OpenAI> | LLM | https://platform.openai.com/ |
-| <Anthropic> | LLM (primary or fallback) | https://console.anthropic.com/ |
-| <other> | <purpose> | <url> |
+| --- | --- | --- |
+| GitHub | Read public repo metadata, stargazer profiles, contributors, releases. **Required for any non-trivial scan.** | <https://github.com/settings/tokens> — a fine-grained PAT with no scopes works for public repos |
 
-You do **not** need all of these to start development. Document which are required for which phase. See `CLAUDE.md` section 18 (Development phases priority).
+The following are **upstream public APIs we federate** — no account needed unless you exceed anonymous rate limits:
+- deps.dev (no auth)
+- scorecard.dev (no auth)
+- osv.dev (no auth)
+
+If you contribute to the `release` workflow you'll also interact with:
+- crates.io (Trusted Publisher / OIDC, no API token in the repo)
+- ghcr.io (uses `GITHUB_TOKEN` from the workflow)
 
 ---
 
 ## 2. Runtime dependencies
 
-<Fill from your project's lockfile. Format:>
+See `Cargo.toml` for the authoritative list. Highlights:
 
-| Package | Version | Purpose |
-|---|---|---|
-| `<dep>` | `<ver>` | <purpose> |
+| Crate | Why |
+| --- | --- |
+| `clap` v4 | CLI parsing, `--help`, completions |
+| `tokio` | Async runtime |
+| `reqwest` (rustls) | HTTP client — **no openssl** |
+| `octocrab` | GitHub REST + GraphQL |
+| `serde` + `serde_json` | Serialization |
+| `rusqlite` (bundled) | Local cache |
+| `r2d2` + `r2d2_sqlite` | Connection pool for batch mode |
+| `tracing` + `tracing-subscriber` | Structured logging |
+| `figment` | Layered config (TOML + env + CLI) |
+| `time` | Timestamps with serde |
+| `rand_chacha` | Deterministic RNG for sampling |
+| `blake3` | Stable hashing for cache keys + RNG seeds |
+| `axum` (`web` feature) | Optional localhost viewer |
+| `petgraph` (`deep` feature) | Graph analysis in deep mode |
 
 ## 3. Dev dependencies
 
-<Same shape as runtime deps. Mark TypeScript / lint tooling / testing.>
+| Crate | Use |
+| --- | --- |
+| `insta` | Snapshot tests for deterministic output |
+| `proptest` | Property tests for scoring functions |
+| `wiremock` | HTTP mocking for collector integration tests |
+| `tempfile` | Temporary directories in tests |
+| `assert_cmd` + `predicates` | CLI integration tests |
+| `criterion` | Benchmarks |
+
+Quality tools (run in CI):
+- `cargo fmt`
+- `cargo clippy`
+- `cargo-tarpaulin`
+- `cargo-deny`
+- `cargo-audit`
 
 ---
 
 ## 4. Approved additions
 
-Libraries that are not yet in `package.json`/equivalent but are pre-approved to add as needed:
+Libraries pre-approved to add as needed:
 
-| Package | Why |
-|---|---|
-| `<lib>` | <reason> |
+| Crate | Why |
+| --- | --- |
+| `tower` | If we need middleware composition beyond `tower-http` |
+| `metrics` | If we expose Prometheus-style metrics from `serve` |
+| `notify` | If we add file-watch on cache for the web viewer |
 
 Approval criterion: small footprint, actively maintained, solves a real problem the standard library doesn't.
 
@@ -58,19 +86,22 @@ Approval criterion: small footprint, actively maintained, solves a real problem 
 
 ## 5. Explicitly banned libraries
 
-<List libraries that are forbidden in this project, with reasons. Examples:>
+| Banned | Use this instead |
+| --- | --- |
+| `openssl` / `openssl-sys` | `rustls` (already in `reqwest`) |
+| `native-tls` | `rustls` |
+| `chrono` | `time` (we standardized on `time` for serde + features) |
+| `lazy_static` | `std::sync::OnceLock` (or `once_cell::sync::Lazy` if MSRV blocks) |
+| `error-chain` | `thiserror` for libraries, `anyhow` for the binary |
+| Any unmaintained crate | Pick an alternative |
 
-- **moment.js** — use `date-fns`.
-- **axios** — use native `fetch`.
-- **jQuery** — no.
-- **lodash** — use native JS methods or small focused utilities.
-- **CSS-in-JS (styled-components, emotion, stitches, vanilla-extract)** — use Tailwind only.
+Enforcement: `deny.toml` blocks `openssl*` and `native-tls`.
 
 ---
 
-## 6. MemPalace (local AI memory)
+## 6. MemPalace (optional, developer tool)
 
-MemPalace gives Claude Code persistent memory across sessions. It is Python-based but used transparently via its CLI and the MCP integration.
+MemPalace gives Claude Code persistent memory across sessions. It is **not** a runtime dependency of Repo Trust — only used by humans + Claude Code working on the repo.
 
 ```bash
 pipx install mempalace
@@ -78,7 +109,7 @@ mempalace init <path-to-project>
 mempalace mine . --mode convos
 ```
 
-MemPalace data lives in `./.mempalace` (gitignored). Structure is defined in `mempalace.yaml` at the repo root. See `docs/MEMPALACE_INTEGRATION_GUIDE.md` for full patterns.
+MemPalace data lives in `./.mempalace` (gitignored). Structure is in `mempalace.yaml`. See `docs/MEMPALACE_INTEGRATION_GUIDE.md`.
 
 ---
 
@@ -92,8 +123,6 @@ Superpowers is a one-time install per developer machine, not per-project.
 /plugin install superpowers@superpowers-marketplace
 ```
 
-Then verify: open a new Claude Code session and ask for help planning a feature. The `brainstorming` skill should auto-activate.
-
 Full mapping of Superpowers skills onto this project's workflow: `docs/SUPERPOWERS_INTEGRATION.md`.
 
 ---
@@ -102,52 +131,65 @@ Full mapping of Superpowers skills onto this project's workflow: `docs/SUPERPOWE
 
 ```bash
 # 1. Clone
-git clone git@github.com:<owner>/<repo>.git
-cd <repo>
+git clone https://github.com/Dmitrze/repo-trust.git
+cd repo-trust
 
-# 2. Install deps
-<pnpm install / uv sync / cargo build / etc.>
+# 2. Install Rust toolchain (rustup will pick up rust-toolchain.toml)
+rustup component add rustfmt clippy
 
-# 3. Set up env
-cp .env.example .env.local
-# ...edit .env.local with real values
+# 3. Build
+cargo build --all-features
 
-# 4. Initialize MemPalace
-pipx install mempalace
-mempalace init .
+# 4. Set up env
+cp .env.example .env
+# ...edit .env and put your GitHub PAT in GITHUB_TOKEN
 
-# 5. Run
-<pnpm dev / etc.>
+# 5. Run tests
+cargo test --all-features
+
+# 6. Install the binary locally (optional)
+cargo install --path .
+
+# 7. Verify
+repo-trust --help
+repo-trust scan octocat/Hello-World --mode quick
 ```
 
 ---
 
-## 9. NPM scripts (or equivalent)
+## 9. Cargo commands cheat sheet
 
-<Fill from your project. Common shape:>
-
-| Script | What it does |
-|---|---|
-| `<dev>` | Start dev server with hot reload |
-| `<build>` | Production build with type-check |
-| `<test>` | Run unit tests |
-| `<test:e2e>` | Run end-to-end tests |
-| `<lint>` | Run linter |
+| Command | What it does |
+| --- | --- |
+| `cargo build` | Debug build |
+| `cargo build --release` | Release build (LTO, stripped) |
+| `cargo test` | All tests |
+| `cargo test --doc` | Doctests only |
+| `cargo test scoring::aggregate` | Single module |
+| `cargo fmt --all` | Format |
+| `cargo fmt --all -- --check` | CI-style check |
+| `cargo clippy --all-targets --all-features -- -D warnings` | Lint |
+| `cargo doc --all-features --no-deps --open` | Build and view rustdoc |
+| `cargo bench` | Run benchmarks |
+| `cargo tarpaulin --all-features --workspace` | Coverage |
+| `cargo deny check` | License + advisory + source check |
+| `cargo audit` | RustSec advisory check |
+| `cargo install --path .` | Install local build to `~/.cargo/bin/` |
 
 ---
 
 ## 10. Branching & commit conventions
 
-- `main` -> production.
-- `develop` -> staging (if you have a staging environment).
-- Feature branches: `feat/<short-name>` off `develop` (or `main` if no staging).
+- `main` → always releasable.
+- Feature branches: `feat/<short-name>` off `main`.
 - Fix branches: `fix/<short-name>`.
-- **Conventional Commits** required: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, `style:`.
+- Doc-only branches: `docs/<short-name>`.
+- **Conventional Commits required:** `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, `ci:`, `perf:`.
 - **Never** commit `.env*` files (other than `.env.example`).
-- **Never** commit real API keys.
+- **Never** commit real API keys or PATs.
 
 ---
 
 ## 11. Questions / blockers
 
-If a service account, API key, or credential is blocking work, log it in MemPalace under `ops` room (or a comparable room) and notify via Slack or your preferred channel. Do not fabricate values or hardcode placeholders that will leak into commits.
+If a service account, API key, or credential is blocking work, log it in MemPalace under `ops` room and notify via your preferred channel. Do not fabricate values or hardcode placeholders that will leak into commits.

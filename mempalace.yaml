@@ -1,51 +1,100 @@
-# MemPalace configuration for this project.
+# MemPalace structure for Repo Trust
 #
-# Wings are top-level domains. Rooms are sub-domains where related drawers (notes)
-# and knowledge-graph triples live. Halls (optional) are sub-groupings inside a
-# room. Each room has keywords used by semantic search.
-#
-# This is a starter layout. Edit room names and keywords to match this project's
-# actual subject areas. Add or remove rooms only if you'll write 10+ drawers there
-# in the next month.
-#
-# Reference: docs/MEMPALACE_INTEGRATION_GUIDE.md
+# This file defines the wing/room layout that Claude Code uses to organise
+# cross-session memory for this project. See docs/MEMPALACE_INTEGRATION_GUIDE.md
+# for setup and usage patterns.
+
+name: repo-trust
+version: 1
+
+# Wings group rooms by concern. Each wing has a primary purpose and one or more
+# rooms that hold the actual notes / knowledge graph triples / diary entries.
 
 wings:
-  - name: <project_name>
-    description: <one-line project description>
+  # ─── Methodology and scoring ─────────────────────────────────────────────
+  - name: methodology
+    purpose: "Public methodology, scoring weights, threshold rationale, citation tracking."
     rooms:
-      - name: product
-        description: Product spec, scope, tier definitions, SLAs, agent-scope changes.
-        keywords: [spec, scope, tier, pricing, sla, feature, scope_change]
+      - name: thresholds
+        purpose: "Why each threshold has the value it does."
+      - name: weights
+        purpose: "Default and preset module weights with rationale."
+      - name: citations
+        purpose: "Papers, blog posts, datasets we cite."
+      - name: disputes
+        purpose: "Methodology disputes from issue tracker; resolutions."
 
-      - name: technical
-        description: Architecture, schema, integrations, infra decisions.
-        keywords: [architecture, schema, edge_function, integration, infra, postgres, supabase]
+  # ─── Module implementations ────────────────────────────────────────────
+  - name: modules
+    purpose: "Per-module engineering notes — features, edge cases, refactors."
+    rooms:
+      - name: stars
+        purpose: "Star Authenticity module — sampling, heuristics, anti-misuse."
+      - name: activity
+        purpose: "Activity Health module — windows, ecosystem awareness."
+      - name: maintainers
+        purpose: "Maintainer Health module — Gini, bus factor, retention."
+      - name: adoption
+        purpose: "Adoption Signals module — deps.dev federation, downloads."
+      - name: security
+        purpose: "Security & Readiness module — Scorecard + OSV federation."
 
-      - name: frontend
-        description: UI, design system, components, routes, tokens.
-        keywords: [ui, ux, component, route, design_token, tailwind, shadcn]
+  # ─── Collectors and APIs ──────────────────────────────────────────────
+  - name: collectors
+    purpose: "HTTP clients, ETag handling, rate-limit coordination, cache hygiene."
+    rooms:
+      - name: github-api
+        purpose: "octocrab quirks, REST/GraphQL trade-offs, rate-limit edge cases."
+      - name: deps-dev
+        purpose: "deps.dev API, repo-to-package mapping, fallback behaviour."
+      - name: scorecard
+        purpose: "scorecard.dev API freshness window, missing-score handling."
+      - name: osv
+        purpose: "OSV API queries, withdrawn-advisory filtering."
+      - name: cache
+        purpose: "SQLite cache schema, migrations, TTL policies."
 
-      - name: ops
-        description: Internal operations, agents, onboarding, calibration, incidents, QA.
-        keywords: [ops, onboarding, calibration, qa, incident, runbook]
+  # ─── Decisions and architecture ──────────────────────────────────────────
+  - name: decisions
+    purpose: "Architectural decisions; promote significant ones to docs/adr/."
+    rooms:
+      - name: adrs
+        purpose: "Triples that map to ADR documents."
+      - name: tradeoffs
+        purpose: "Trade-offs we noticed but didn't escalate to ADRs (yet)."
+      - name: rejections
+        purpose: "Rejected proposals with reasoning so they aren't re-proposed."
 
-      - name: gtm
-        description: Strategy, marketing, customer journey, vertical pages, outbound.
-        keywords: [gtm, marketing, customer_journey, vertical, outbound, pipeline]
+  # ─── Operations ───────────────────────────────────────────────────────
+  - name: ops
+    purpose: "Release process, CI, distribution, sponsor / fund applications."
+    rooms:
+      - name: releases
+        purpose: "Release runbooks, tag history, changelog templates."
+      - name: ci
+        purpose: "GitHub Actions trivia, runner quirks, CodeQL/Scorecard self-application."
+      - name: distribution
+        purpose: "crates.io, ghcr.io, Homebrew tap, standalone binaries."
+      - name: funding
+        purpose: "Sponsor messages, grant applications, fund correspondence."
+      - name: blockers
+        purpose: "Outstanding blockers (missing API keys, account access, etc)."
 
-      - name: brand
-        description: Brand assets, logo, visual identity, tone of voice.
-        keywords: [brand, logo, identity, tone_of_voice, visual]
+  # ─── Sessions and benchmark ────────────────────────────────────────────
+  - name: sessions
+    purpose: "Diary of working sessions — what was done, what's next."
+    rooms:
+      - name: diary
+        purpose: "One entry per substantive session."
+      - name: handoffs
+        purpose: "Hand-off notes when switching context or contributors."
 
-      - name: decisions
-        description: Architectural and product decisions with rationale and trade-offs.
-        keywords: [decision, rationale, trade_off, rejected_alternative, adr]
-
-      - name: sessions
-        description: Working session notes, checkpoints, what was completed, what's next, blockers.
-        keywords: [session, checkpoint, completed, next_steps, blocker, diary]
-
-      - name: general
-        description: Anything that doesn't fit elsewhere. Avoid using this as a default.
-        keywords: [misc, general, uncategorized]
+  - name: benchmark
+    purpose: "Benchmark set, validation runs, score-drift tracking."
+    rooms:
+      - name: set
+        purpose: "The 50-repo curated set with expected categories and rationale."
+      - name: runs
+        purpose: "Per-version benchmark run results and category accuracy."
+      - name: drift
+        purpose: "Repos whose category changed across versions; explanations."
