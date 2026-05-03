@@ -26,11 +26,10 @@
 #![deny(unsafe_code)]
 #![warn(missing_debug_implementations)]
 #![warn(rust_2018_idioms)]
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![allow(clippy::module_name_repetitions)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::missing_panics_doc)]
+// NOTE: clippy::pedantic is intentionally NOT enabled at the crate level
+// during pre-alpha. The crate skeleton is intentionally sparse and pedantic
+// produces a flood of noise that obscures real issues. Re-enable once
+// Phase 1 modules ship with real implementations.
 
 pub mod api;
 pub mod cli;

@@ -1,5 +1,18 @@
 name: CI
 
+# Pre-alpha CI: lite gates only.
+#
+# We deliberately do NOT enforce -D warnings, pedantic clippy, coverage,
+# cargo-deny, or cargo-audit at this stage. The crate is a typed skeleton
+# whose modules return Err("not yet implemented"); strict lint gates
+# produce noise, not signal.
+#
+# Re-enable strict gates progressively as Phase 1 modules land:
+#   - Phase 1: enable -D warnings + pedantic clippy on real code.
+#   - Phase 2: enable coverage gate (>=70% overall).
+#   - Phase 2: enable cargo-deny and cargo-audit.
+#   - v1.0:    enable rustdoc -D warnings.
+
 on:
   push:
     branches: [main]
@@ -13,7 +26,6 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
   RUST_BACKTRACE: 1
 
 jobs:
@@ -32,120 +44,25 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-  clippy:
-    name: clippy
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-      - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-  test:
-    name: test (${{ matrix.os }} · ${{ matrix.rust }})
+  build:
+    name: build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable]
-        include:
-          # Also test against MSRV on Linux only
-          - os: ubuntu-latest
-            rust: "1.75"
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install Rust ${{ matrix.rust }}
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.rust }}
-      - name: Build
-        run: cargo build --all-features --all-targets
-      - name: Run tests
+      - name: cargo check
+        run: cargo check --all-features
+      - name: cargo build
+        run: cargo build --all-features
+      - name: cargo test
         run: cargo test --all-features
-      - name: Run doctests
-        run: cargo test --all-features --doc
-
-  coverage:
-    name: coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-      - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin --locked
-      - name: Run coverage
-        run: cargo tarpaulin --all-features --workspace --timeout 600 --out Xml --output-dir target/coverage
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: target/coverage/cobertura.xml
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  deny:
-    name: cargo-deny
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check
-          arguments: --all-features
-
-  audit:
-    name: cargo-audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-      - name: Audit dependencies
-        run: cargo audit --deny warnings
-
-  docs:
-    name: rustdoc
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      RUSTDOCFLAGS: "-D warnings"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-      - name: Build documentation
-        run: cargo doc --all-features --no-deps

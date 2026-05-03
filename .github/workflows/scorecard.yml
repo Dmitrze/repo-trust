@@ -1,11 +1,12 @@
 name: Scorecard supply-chain security
 
+# Disabled on every push during pre-alpha. Run manually via the
+# "Run workflow" button in the Actions tab when we want a Scorecard
+# snapshot — the report makes no sense against a skeleton crate.
+#
+# Re-enable scheduled runs once Phase 1 ships.
+
 on:
-  branch_protection_rule:
-  schedule:
-    - cron: "0 4 * * 1"   # Monday 04:00 UTC
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions: read-all
