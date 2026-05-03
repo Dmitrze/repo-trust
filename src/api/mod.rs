@@ -8,3 +8,5 @@ pub mod deps_dev;
 pub mod github;
 pub mod osv;
 pub mod scorecard;
+
+pub use scorecard::Client as ScorecardClient;
