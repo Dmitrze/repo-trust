@@ -63,6 +63,7 @@
 - `collectors` may import from `api`, `storage`, `models`, `utils` — never from `modules` or `scoring`.
 - `scoring` is pure (no I/O). It accepts feature structs and returns score structs.
 - `reports` reads from `models` only — never re-runs collectors.
+- `models` is the type vocabulary; it does **not** depend on `storage` or `api` for any leaf type. **Exception:** `RepositoryContext` carries runtime handles (`Cache`, `GithubClient`, `ScorecardClient`, `OsvClient`, `DepsDevClient`) for v1 — see [ADR-0012](adr/0012-repository-context-runtime-handles.md). Post-v1.0 forward path: split into `runtime::RunContext` if a second consumer of `models` ever appears.
 
 ---
 
