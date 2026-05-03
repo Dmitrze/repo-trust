@@ -1,0 +1,3 @@
+//! Localhost web viewer (feature `web`).
+
+// TODO: axum app exposing /, /reports, /reports/:owner/:repo, /api/reports/...
