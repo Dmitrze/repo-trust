@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 use super::scores::ModuleWeights;
+use crate::api::github::Client as GithubClient;
 use crate::cli::scan::Mode as CliMode;
 use crate::storage::Cache;
 
@@ -21,7 +22,7 @@ pub struct RepositorySummary {
 /// Internal context shared across the run.
 ///
 /// Not serialised — holds API clients, cache handles, etc. Cheap to clone;
-/// the [`Cache`] is `Arc`-internal via r2d2.
+/// the [`Cache`] and [`GithubClient`] are `Arc`-internal.
 #[derive(Debug, Clone)]
 pub struct RepositoryContext {
     pub full_name: String,
@@ -32,4 +33,17 @@ pub struct RepositoryContext {
     pub rng_seed: u64,
     pub snapshot_at: OffsetDateTime,
     pub cache: Cache,
+    pub github: GithubClient,
+}
+
+impl RepositoryContext {
+    /// `(owner, repo)` split of `full_name`. Panics only if the constructor
+    /// accepted an invalid identifier — call sites already normalize via
+    /// `utils::repo_url::parse`.
+    #[must_use]
+    pub fn owner_repo(&self) -> (&str, &str) {
+        self.full_name
+            .split_once('/')
+            .expect("full_name is owner/repo per utils::repo_url::parse")
+    }
 }
