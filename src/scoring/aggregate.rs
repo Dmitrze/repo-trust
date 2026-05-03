@@ -97,12 +97,14 @@ mod tests {
             module("stars", 100, Confidence::High),
             module("activity", 0, Confidence::Low),
         ];
-        let mut w = ModuleWeights::default();
-        w.stars = 0.5;
-        w.activity = 0.5;
-        w.maintainers = 0.0;
-        w.adoption = 0.0;
-        w.security = 0.0;
+        // Build weights inline to avoid clippy::field_reassign_with_default.
+        let w = ModuleWeights {
+            stars: 0.5,
+            activity: 0.5,
+            maintainers: 0.0,
+            adoption: 0.0,
+            security: 0.0,
+        };
 
         let s_high = aggregate(&high_only, &w);
         let s_mixed = aggregate(&mixed_conf, &w);
