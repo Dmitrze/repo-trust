@@ -89,6 +89,53 @@ impl Default for MaintainerThresholds {
     }
 }
 
+/// Threshold table for the Adoption Signals module
+/// (`docs/methodology.md` §Module 4).
+///
+/// Logarithmic banding for weekly downloads — the spec calls for exact
+/// breakpoints at 0, 1k, 10k, 100k, 1M+. We expose them as fields so users
+/// can override via `~/.repo-trust/config.toml` once Day 5 wires that.
+#[derive(Debug, Clone, Copy)]
+pub struct AdoptionThresholds {
+    /// Weekly-download breakpoint for the 25-point band.
+    pub downloads_band_25: u64,
+    /// Weekly-download breakpoint for the 50-point band.
+    pub downloads_band_50: u64,
+    /// Weekly-download breakpoint for the 75-point band.
+    pub downloads_band_75: u64,
+    /// Weekly-download breakpoint for the 100-point band.
+    pub downloads_band_100: u64,
+    /// Word-count breakpoint above which the README earns the highest doc-maturity weight.
+    pub readme_words_full_credit: u64,
+    /// Word-count breakpoint at which the README earns half doc-maturity weight.
+    pub readme_words_half_credit: u64,
+    /// Weekly-downloads floor above which High confidence is achievable.
+    pub high_confidence_downloads_floor: u64,
+}
+
+impl AdoptionThresholds {
+    /// Defaults from `docs/methodology.md` §Module 4 v1.0 and
+    /// `specs/adoption-signals-module.md` §9.
+    #[must_use]
+    pub const fn v1() -> Self {
+        Self {
+            downloads_band_25: 1_000,
+            downloads_band_50: 10_000,
+            downloads_band_75: 100_000,
+            downloads_band_100: 1_000_000,
+            readme_words_full_credit: 500,
+            readme_words_half_credit: 100,
+            high_confidence_downloads_floor: 10_000,
+        }
+    }
+}
+
+impl Default for AdoptionThresholds {
+    fn default() -> Self {
+        Self::v1()
+    }
+}
+
 /// Linear interpolation: lower input value → higher score (e.g. days
 /// since last commit).
 #[must_use]

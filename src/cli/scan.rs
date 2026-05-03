@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 use time::OffsetDateTime;
 
+use crate::api::deps_dev::Client as DepsDevClient;
 use crate::api::github::Client as GhClient;
 use crate::api::github::GithubError;
 use crate::api::osv::Client as OsvClient;
@@ -156,12 +157,14 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
     let mut github = GhClient::new(http.clone(), cache.clone(), limiter, token);
     let mut scorecard = ScorecardClient::new(http.clone(), cache.clone());
     let mut osv = OsvClient::new(http.clone(), cache.clone());
+    let mut deps_dev = DepsDevClient::new(http.clone(), cache.clone());
     if let Some(base) = args.api_base_url.as_deref() {
         github = github.with_base_url(base);
         // The same wiremock server hosts the federated mocks in tests; in
         // production the federated clients hit their real endpoints.
         scorecard = scorecard.with_base_url(base);
         osv = osv.with_base_url(base);
+        deps_dev = deps_dev.with_base_url(base);
     }
 
     // ─── Scoring version + seed ────────────────────────────────────────
@@ -188,6 +191,7 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
         github: github.clone(),
         scorecard,
         osv,
+        deps_dev,
     };
 
     // ─── Run modules ──────────────────────────────────────────────────

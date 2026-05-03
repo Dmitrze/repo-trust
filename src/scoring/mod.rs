@@ -7,6 +7,7 @@
 //! - Sums are performed in deterministic order.
 
 pub mod activity;
+pub mod adoption;
 pub mod aggregate;
 pub mod confidence;
 pub mod explain;

@@ -127,7 +127,9 @@ async fn build_ctx(server_uri: String) -> (RepositoryContext, tempfile::TempDir)
     let github = GhClient::new(http.clone(), cache.clone(), RateLimiter::new(10), None)
         .with_base_url(&server_uri);
     let scorecard = ScorecardClient::new(http.clone(), cache.clone()).with_base_url(&server_uri);
-    let osv = OsvClient::new(http, cache.clone()).with_base_url(&server_uri);
+    let osv = OsvClient::new(http.clone(), cache.clone()).with_base_url(&server_uri);
+    let deps_dev =
+        repo_trust::api::deps_dev::Client::new(http, cache.clone()).with_base_url(&server_uri);
     let ctx = RepositoryContext {
         full_name: "acme/widget".into(),
         canonical_url: url::Url::parse("https://github.com/acme/widget").unwrap(),
@@ -140,6 +142,7 @@ async fn build_ctx(server_uri: String) -> (RepositoryContext, tempfile::TempDir)
         github,
         scorecard,
         osv,
+        deps_dev,
     };
     (ctx, dir)
 }

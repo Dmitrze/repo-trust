@@ -100,7 +100,10 @@ async fn s002_solo_maintainer_flagged_but_not_highrisk() {
         .with_base_url(server.uri());
     let scorecard = repo_trust::api::scorecard::Client::new(http.clone(), cache.clone())
         .with_base_url(server.uri());
-    let osv = repo_trust::api::osv::Client::new(http, cache.clone()).with_base_url(server.uri());
+    let osv =
+        repo_trust::api::osv::Client::new(http.clone(), cache.clone()).with_base_url(server.uri());
+    let deps_dev =
+        repo_trust::api::deps_dev::Client::new(http, cache.clone()).with_base_url(server.uri());
 
     let ctx = RepositoryContext {
         full_name: "acme/widget".into(),
@@ -118,6 +121,7 @@ async fn s002_solo_maintainer_flagged_but_not_highrisk() {
         github,
         scorecard,
         osv,
+        deps_dev,
     };
 
     let module = repo_trust::modules::maintainers::MaintainersModule;

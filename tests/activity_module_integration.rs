@@ -100,7 +100,10 @@ async fn s001_inactive_repo_scores_low() {
         .with_base_url(server.uri());
     let scorecard = repo_trust::api::scorecard::Client::new(http.clone(), cache.clone())
         .with_base_url(server.uri());
-    let osv = repo_trust::api::osv::Client::new(http, cache.clone()).with_base_url(server.uri());
+    let osv =
+        repo_trust::api::osv::Client::new(http.clone(), cache.clone()).with_base_url(server.uri());
+    let deps_dev =
+        repo_trust::api::deps_dev::Client::new(http, cache.clone()).with_base_url(server.uri());
 
     let ctx = RepositoryContext {
         full_name: "octocat/Hello-World".into(),
@@ -118,6 +121,7 @@ async fn s001_inactive_repo_scores_low() {
         github,
         scorecard,
         osv,
+        deps_dev,
     };
 
     let module = repo_trust::modules::activity::ActivityModule;
