@@ -1,8 +1,8 @@
 //! Deterministic stargazer sampling helpers.
 
 use rand::seq::SliceRandom;
-use rand_chacha::ChaCha20Rng;
 use rand_chacha::rand_core::SeedableRng;
+use rand_chacha::ChaCha20Rng;
 
 /// Derive a stable 64-bit seed from `(repo, scoring_version)` via blake3.
 ///
@@ -24,7 +24,7 @@ pub fn derive_seed(repo: &str, scoring_version: &str) -> u64 {
 /// Order in the returned vec is the order produced by `partial_shuffle`,
 /// which is deterministic given the same seed.
 #[must_use]
-pub fn sample<'a, T: Clone>(items: &'a [T], n: usize, seed: u64) -> Vec<T> {
+pub fn sample<T: Clone>(items: &[T], n: usize, seed: u64) -> Vec<T> {
     let mut rng = ChaCha20Rng::seed_from_u64(seed);
     let mut indices: Vec<usize> = (0..items.len()).collect();
     let take = n.min(items.len());
