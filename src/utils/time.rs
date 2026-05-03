@@ -9,13 +9,15 @@ pub mod iso8601 {
     where
         S: Serializer,
     {
-        let s = dt.format(&Iso8601::DEFAULT).map_err(serde::ser::Error::custom)?;
+        let s = dt
+            .format(&Iso8601::DEFAULT)
+            .map_err(serde::ser::Error::custom)?;
         serializer.serialize_str(&s)
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<OffsetDateTime, D::Error>
     where
-        D: Deserialize<'de>,
+        D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         OffsetDateTime::parse(&s, &Iso8601::DEFAULT).map_err(serde::de::Error::custom)
