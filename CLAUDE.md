@@ -58,7 +58,8 @@ See `Cargo.toml` for the authoritative list. Highlights:
 - **CLI:** `clap` v4 (derive) + `clap_complete` + `indicatif` + `console` + `comfy-table`.
 - **Async:** `tokio` (full features) + `async-trait` + `futures`.
 - **HTTP:** `reqwest` with `rustls-tls`, `gzip`, `http2` features. **No `openssl` or `native-tls` — enforced by `deny.toml`.**
-- **GitHub API:** `octocrab`.
+- **GitHub API:** direct `reqwest` + `serde` in `src/api/github.rs`. We previously planned `octocrab` but removed it in v0.1 once the cache + ETag layer made wrappers unnecessary; bringing it back is a one-line `cargo add` if Phase 2 wants GraphQL for deep stargazer dates.
+- **URL / SemVer / dirs:** `url`, `semver` (with `serde`), `dirs` — small leaf crates used by `utils::repo_url`, scoring-version pinning, and the cache-path resolver respectively.
 - **Serialization:** `serde` + `serde_json` + `serde_with` + `schemars` + `toml`.
 - **Storage:** `rusqlite` (bundled) + `r2d2` + `r2d2_sqlite` + `rusqlite_migration`.
 - **Logging:** `tracing` + `tracing-subscriber` (env-filter + json).
@@ -84,7 +85,7 @@ See `REQUIREMENTS.md` for the full developer setup.
 
 Specific in-scope items right now:
 - Wire `cli::scan::execute()` end-to-end with the module registry.
-- Implement `src/api/github.rs` (octocrab wrappers + ETag tracking).
+- Implement `src/api/github.rs` (direct `reqwest` + `serde` with ETag-aware fetch).
 - Implement `src/storage/cache.rs` (r2d2 SQLite pool + `rusqlite_migration`).
 - Implement Activity Health collector + features + scorer with full unit tests.
 - Land first `insta` snapshot test against a wiremock-served fixture.
