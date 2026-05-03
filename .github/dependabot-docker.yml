@@ -1,5 +1,5 @@
-version: 1
-update_configs:
-  - package_manager: "docker"
-    directory: "/"
-    update_schedule: "weekly"
+# Disabled. The proper dependabot config is at .github/dependabot.yml
+# (also disabled until Phase 1 ships). This file was a stray v1 config
+# from an earlier commit; please delete it via UI or git when convenient.
+version: 2
+updates: []
