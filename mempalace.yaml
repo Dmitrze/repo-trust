@@ -1,0 +1,51 @@
+# MemPalace configuration for this project.
+#
+# Wings are top-level domains. Rooms are sub-domains where related drawers (notes)
+# and knowledge-graph triples live. Halls (optional) are sub-groupings inside a
+# room. Each room has keywords used by semantic search.
+#
+# This is a starter layout. Edit room names and keywords to match this project's
+# actual subject areas. Add or remove rooms only if you'll write 10+ drawers there
+# in the next month.
+#
+# Reference: docs/MEMPALACE_INTEGRATION_GUIDE.md
+
+wings:
+  - name: <project_name>
+    description: <one-line project description>
+    rooms:
+      - name: product
+        description: Product spec, scope, tier definitions, SLAs, agent-scope changes.
+        keywords: [spec, scope, tier, pricing, sla, feature, scope_change]
+
+      - name: technical
+        description: Architecture, schema, integrations, infra decisions.
+        keywords: [architecture, schema, edge_function, integration, infra, postgres, supabase]
+
+      - name: frontend
+        description: UI, design system, components, routes, tokens.
+        keywords: [ui, ux, component, route, design_token, tailwind, shadcn]
+
+      - name: ops
+        description: Internal operations, agents, onboarding, calibration, incidents, QA.
+        keywords: [ops, onboarding, calibration, qa, incident, runbook]
+
+      - name: gtm
+        description: Strategy, marketing, customer journey, vertical pages, outbound.
+        keywords: [gtm, marketing, customer_journey, vertical, outbound, pipeline]
+
+      - name: brand
+        description: Brand assets, logo, visual identity, tone of voice.
+        keywords: [brand, logo, identity, tone_of_voice, visual]
+
+      - name: decisions
+        description: Architectural and product decisions with rationale and trade-offs.
+        keywords: [decision, rationale, trade_off, rejected_alternative, adr]
+
+      - name: sessions
+        description: Working session notes, checkpoints, what was completed, what's next, blockers.
+        keywords: [session, checkpoint, completed, next_steps, blocker, diary]
+
+      - name: general
+        description: Anything that doesn't fit elsewhere. Avoid using this as a default.
+        keywords: [misc, general, uncategorized]
