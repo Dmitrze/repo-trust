@@ -1,6 +1,9 @@
 # rustfmt configuration
-# We use the stable defaults plus a few opinionated tweaks.
 # Run with: cargo fmt --all
+#
+# We stick to the stable defaults plus a few simple tweaks. Anything
+# requiring `cargo +nightly fmt` is intentionally NOT enabled here —
+# CI runs stable fmt and we want it to be a clean gate, not a noisy one.
 
 edition = "2021"
 max_width = 100
@@ -10,12 +13,14 @@ use_field_init_shorthand = true
 use_try_shorthand = true
 reorder_imports = true
 reorder_modules = true
-fn_params_layout = "Tall"
 match_block_trailing_comma = true
 remove_nested_parens = true
-imports_granularity = "Crate"
-group_imports = "StdExternalCrate"
 
-# Note: some options above are nightly-only. CI runs `cargo fmt --check`
-# under stable; non-stable options will be silently ignored on stable
-# builds and only enforce when contributors use nightly fmt.
+# Nightly-only options that previously lived here have been removed:
+#   - imports_granularity = "Crate"
+#   - group_imports = "StdExternalCrate"
+#   - fn_params_layout = "Tall"
+#
+# Recent stable rustfmt (1.95+) treats unknown keys as a soft error,
+# which broke `cargo fmt --check` in CI. If we want these someday we'll
+# either pin nightly fmt explicitly in CI or wait for stabilisation.
