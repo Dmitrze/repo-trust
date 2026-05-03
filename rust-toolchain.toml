@@ -1,0 +1,8 @@
+# Pin the Rust toolchain so contributors get a reproducible environment.
+# Stable channel; CI also tests against MSRV (1.75) separately.
+
+[toolchain]
+channel = "stable"
+profile = "default"
+components = ["rustfmt", "clippy", "rust-src"]
+targets = []

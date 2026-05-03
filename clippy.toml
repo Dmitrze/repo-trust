@@ -1,0 +1,14 @@
+# clippy configuration
+# Run with: cargo clippy --all-targets --all-features -- -D warnings
+
+# Cognitive complexity threshold for individual functions.
+cognitive-complexity-threshold = 30
+
+# Functions with more than N arguments are considered too complex.
+too-many-arguments-threshold = 8
+
+# Tracing macros are recognized so that format-string lints don't fire on them.
+allow-print-in-tests = true
+
+# MSRV pin for clippy.
+msrv = "1.75.0"
