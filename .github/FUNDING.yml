@@ -1,0 +1,7 @@
+# Show "Sponsor" button at the top of the repo and on PR pages.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+
+github: [Dmitrze]
+# tidelift: "crates/repo-trust"   # enable once Tidelift relationship is set up
+# open_collective: repo-trust    # enable if/when an OC fiscal host is set up
+custom: []

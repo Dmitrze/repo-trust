@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussion
+    url: https://github.com/Dmitrze/repo-trust/discussions
+    about: General questions, methodology debates, design conversations.
+  - name: 🔒 Security vulnerability
+    url: https://github.com/Dmitrze/repo-trust/security/advisories/new
+    about: Report a security vulnerability privately. Please do NOT open a public issue.
+  - name: 📖 Documentation
+    url: https://github.com/Dmitrze/repo-trust/tree/main/docs
+    about: Read the PRD, architecture, methodology, and module specs before filing.
