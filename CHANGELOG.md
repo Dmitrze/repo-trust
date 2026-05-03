@@ -19,6 +19,7 @@ The **scoring model** has its own SemVer separate from the CLI version. See [`do
 - ADR-0011: TrustModule trait shipped object-safe `run()` shape (locks the v1 trait surface).
 - Spec-first scaffolding: `specs/{cache-layer,config-loader,github-api-client,activity-health-module}.md` with paired `tests/scenarios/`.
 - Storage layer: r2d2-pooled SQLite cache (`src/storage/cache.rs`), schema migrations via `rusqlite_migration` (`src/storage/migrations/0001_initial.sql`), 0600 file perms on Unix, `Cache` handle threaded into `RepositoryContext`.
+- Layered configuration via `figment`: embedded `src/config/default.toml` + user file (`~/.repo-trust/config.toml`) + project file (`./.repo-trust.toml`) + `REPO_TRUST_*` env + CLI overrides; `Config` typed structs with `WeightsConfig::into() → ModuleWeights`, tilde expansion in cache path, `GithubConfig::resolve_token()` reading the configured env var.
 
 ### Notes
 - Pre-alpha. APIs and outputs will change before `v1.0.0`. Do not depend on this in production.

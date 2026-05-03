@@ -1,0 +1,47 @@
+# Repo Trust — built-in default configuration.
+#
+# This file is embedded in the binary at compile time via include_str!.
+# Users override fields by creating ~/.repo-trust/config.toml or
+# ./.repo-trust.toml. Environment variables of the form
+#   REPO_TRUST_<SECTION>__<FIELD>=value
+# (note the double underscore separating section and field) override files.
+# CLI flags override everything.
+#
+# Reference: docs/architecture.md §11, specs/config-loader.md.
+
+[github]
+# Name of the environment variable that holds a GitHub Personal Access Token.
+# We never store the token itself in config files.
+token_env = "GITHUB_TOKEN"
+
+[scan]
+# Default execution mode when --mode is not passed. One of "quick", "standard", "deep".
+default_mode = "standard"
+# Modules enabled by default. Can be overridden per-invocation by --modules / --skip-modules.
+default_modules = ["stars", "activity", "maintainers", "adoption", "security"]
+
+[weights]
+# Per-module weights for the overall trust-score aggregate. See docs/scoring-model.md.
+# Sum need not be exactly 1.0; the aggregator confidence-weights from these.
+stars       = 0.20
+activity    = 0.25
+maintainers = 0.20
+adoption    = 0.20
+security    = 0.15
+
+[stars]
+# Stargazer sample sizes by mode (Phase 2 use; Phase 1 reads but does not apply).
+sample_size_quick    = 0
+sample_size_standard = 200
+sample_size_deep     = 2000
+
+[output]
+# Output formats written to --output by default. Terminal is always shown unless --quiet.
+default_formats = ["terminal", "json"]
+
+[cache]
+# On-disk SQLite cache location. Tilde expansion handled by the loader.
+path = "~/.repo-trust/cache.db"
+# Soft cap on cache file size in megabytes. Phase 1 surfaces this in `cache info`;
+# eviction is manual via `repo-trust cache prune` (LRU eviction lands in v1.1).
+max_size_mb = 500

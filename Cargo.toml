@@ -106,6 +106,9 @@ tempfile = "3.12"
 assert_cmd = "2.0"
 predicates = "3.1"
 criterion = { version = "0.5", features = ["async_tokio"] }
+# `figment` Jail used for hermetic env+file-scoped config tests; gated
+# behind the "test" feature in figment itself.
+figment = { version = "0.10", features = ["toml", "env", "test"] }
 
 # ─── Features ──────────────────────────────────────────────────────────
 [features]
