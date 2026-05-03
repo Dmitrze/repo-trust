@@ -1,21 +1,39 @@
 # Changelog
 
-All material changes to this project. Notable shipped features, architectural shifts, agent-version promotions, infrastructure changes, and AI-native operating-model evolutions.
+All notable changes to this project will be documented in this file.
 
-Format: reverse-chronological. Each entry is one to three sentences with a link to the commit / PR. Conventions follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely — strict semver is not enforced.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Maintainer: this file is intended to be agent-maintained on every merge to `main`. Until that automation lands, entries are added manually as part of every PR's Definition of Done.
-
----
+The **scoring model** has its own SemVer separate from the CLI version. See [`docs/scoring-model.md`](docs/scoring-model.md) for the scoring change log.
 
 ## [Unreleased]
 
-*Changes on the `develop` branch not yet promoted to `main`.*
+### Added
+- Foundation documents: PRD, architecture, methodology plan
+- Apache-2.0 license; methodology docs additionally under CC-BY-4.0
+- Code of Conduct (Contributor Covenant 2.1)
+- Contributing guide, security policy, support policy
+- Repository structure for Rust CLI implementation
+- Five-module trust framework definition: Star Authenticity, Activity Health, Maintainer Health, Adoption Signals, Security & Readiness
+- Federation strategy with OpenSSF Scorecard, deps.dev, OSV (consume, do not replicate)
+
+### Notes
+- Pre-alpha. APIs and outputs will change before `v1.0.0`. Do not depend on this in production.
 
 ---
 
-## <YYYY-MM-DD> — Project initialized from `ai-native-foundation` template
+## [0.1.0] — TBD
 
-New project bootstrapped from the [ai-native-foundation](https://github.com/Dmitrze/ai-native-foundation) GitHub template. The repo ships with the AI-native constitution, generic Claude Code operating manual, AI-native playbook, Boris Cherny workflow cycle, multi-agent master template, Superpowers integration guide, MemPalace setup, and the spec/scenario/agent/runbook scaffolding directories. Adapted to this project: filled CLAUDE.md placeholders (sections 1-8, 14, 18), rewrote `docs/AI_NATIVE_PLAYBOOK.md` section 11 (project-specific application), filled `docs/Closed Loops Inventory.md` rows, and updated REQUIREMENTS.md to the actual stack.
+The initial release will include:
+- CLI skeleton (`scan`, `batch`, `explain`, `serve`, `cache`, `config`, `version`)
+- Activity Health module
+- Maintainer Health module
+- Security & Readiness module (federating OpenSSF Scorecard)
+- JSON and Markdown report writers
+- SQLite-backed local cache with ETag-aware fetching
+- Quick and Standard execution modes
 
-*All future changes go below this line.*
+The Star Authenticity, Adoption Signals, and Deep mode features are planned for `0.2.0` and beyond.
+
+[Unreleased]: https://github.com/Dmitrze/repo-trust/compare/HEAD
+[0.1.0]: https://github.com/Dmitrze/repo-trust/releases/tag/v0.1.0
