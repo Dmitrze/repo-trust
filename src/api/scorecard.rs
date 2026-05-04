@@ -276,12 +276,26 @@ mod date_parsing_tests {
     /// Real-world fixtures captured from `api.scorecard.dev` — the file
     /// names map to the upstream `github.com/<owner>/<repo>` paths. Kept
     /// as a hard-coded list to avoid pulling a `glob` dev-dep in for one
-    /// test.
+    /// test. Paths are anchored at `CARGO_MANIFEST_DIR` so the test
+    /// works under any cwd (CI runners do not always cd into the
+    /// package root before invoking cargo test).
     const FIXTURES: &[&str] = &[
-        "tests/fixtures/scorecard/clap-rs_clap.json",
-        "tests/fixtures/scorecard/octocat_hello-world.json",
-        "tests/fixtures/scorecard/rust-lang_rust.json",
-        "tests/fixtures/scorecard/tokio-rs_tokio.json",
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/scorecard/clap-rs_clap.json"
+        ),
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/scorecard/octocat_hello-world.json"
+        ),
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/scorecard/rust-lang_rust.json"
+        ),
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/scorecard/tokio-rs_tokio.json"
+        ),
     ];
 
     #[test]
