@@ -27,13 +27,14 @@
 //! Section titles ("Top strengths" / "Top concerns") are colored green / red
 //! when `color = true`. Per-item glyph and verdict label are colored by the
 //! item's `Verdict`: Positive (green ✔), Concerning (yellow ✖),
-//! HighRisk (red ✖). Module names in the table use display-friendly forms
-//! ("Star Authenticity" rather than "stars") that mirror the README banner.
+//! HighRisk (red ✖), Neutral (gray •). Module names in the table use
+//! display-friendly forms ("Star Authenticity" rather than "stars") that
+//! mirror the README banner.
 //!
 //! When `color = false`, no ANSI escape sequences are emitted; the glyphs
-//! become `[+]` / `[!]` / `[-]` for Positive / Concerning / HighRisk
-//! respectively, for plain-ASCII friendliness. The output is verified by
-//! the snapshot test in `tests/reports_terminal_snapshot.rs`.
+//! become `[+]` / `[!]` / `[-]` / `[~]` for Positive / Concerning / HighRisk /
+//! Neutral respectively, for plain-ASCII friendliness. The output is
+//! verified by the snapshot test in `tests/reports_terminal_snapshot.rs`.
 
 use std::io::Write;
 
@@ -187,10 +188,14 @@ fn write_evidence_section<W: Write>(
     }
 
     for item in items {
+        // Per-item styling driven by the verdict — Color::Color256(244)
+        // is a mid-grey for Neutral so it reads as informational rather
+        // than green/yellow/red.
         let (glyph_char, fallback, verdict_color, verdict_text) = match item.verdict {
             Verdict::Positive => ("✔", "[+]", Color::Green, "Positive"),
             Verdict::Concerning => ("✖", "[!]", Color::Yellow, "Concerning"),
             Verdict::HighRisk => ("✖", "[-]", Color::Red, "HighRisk"),
+            Verdict::Neutral => ("•", "[~]", Color::Color256(244), "Neutral"),
         };
         let glyph = if color {
             paint(glyph_char.to_string(), verdict_color, true)
@@ -647,6 +652,25 @@ mod tests {
         assert!(
             out.contains("[!] Concerning"),
             "expected concerning verdict label '[!] Concerning' in output:\n{out}"
+        );
+    }
+
+    #[test]
+    fn evidence_renders_neutral_verdict_with_tilde_glyph() {
+        // Defensive — the snapshot fixture currently has no Neutral items,
+        // but the match arm must cover the variant or compilation fails.
+        // Use a tiny ad-hoc report rather than mutating the shared fixture.
+        let mut report = five_module_report();
+        report.top_strengths = vec![ev(
+            "stars",
+            "watcher_to_star_ratio",
+            Verdict::Neutral,
+            "ratio is within the expected band — neither suspicious nor strong.",
+        )];
+        let out = render(&report, false);
+        assert!(
+            out.contains("[~] Neutral"),
+            "expected neutral verdict label '[~] Neutral' in output:\n{out}"
         );
     }
 }
