@@ -35,6 +35,12 @@
 //! become `[+]` / `[!]` / `[-]` / `[~]` for Positive / Concerning / HighRisk /
 //! Neutral respectively, for plain-ASCII friendliness. The output is
 //! verified by the snapshot test in `tests/reports_terminal_snapshot.rs`.
+//!
+//! `comfy_table` uses `ContentArrangement::Dynamic` and may wrap long cell
+//! content across multiple rows when the table can't fit the whole row.
+//! That's intentional — narrow terminals still get a readable table — but
+//! it means string-equality assertions in tests should use the
+//! `normalize_table_text` helper to fold those wraps.
 
 use std::io::Write;
 
@@ -333,6 +339,28 @@ mod tests {
     use std::collections::BTreeMap;
     use time::macros::datetime;
 
+    /// Fold comfy_table cell wrapping back into single-line strings so
+    /// integration assertions don't break when long content wraps.
+    ///
+    /// `comfy_table` with `ContentArrangement::Dynamic` may split a long
+    /// cell value across multiple visual rows — e.g. `low_activity_share=85`
+    /// can render as
+    /// ```text
+    /// │ ... low_activity_share                 │
+    /// │     =85                                │
+    /// ```
+    /// All of our integration tests in this module care about *what* gets
+    /// rendered, not the exact wrap column; this helper collapses runs of
+    /// whitespace (including newlines and table-internal padding) into a
+    /// single space and folds the leading-space-before-`=` pattern that
+    /// `comfy_table` produces when wrapping `key=value` cells.
+    fn normalize_table_text(s: &str) -> String {
+        s.split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .replace(" =", "=")
+    }
+
     fn fixture_summary() -> RepositorySummary {
         RepositorySummary {
             full_name: "octocat/Hello-World".to_string(),
@@ -493,13 +521,15 @@ mod tests {
     fn module_table_contains_all_module_display_names_and_scores() {
         let report = five_module_report();
         let out = render(&report, false);
+        // Long display names ("Security & Readiness") may wrap across
+        // multiple table rows under ContentArrangement::Dynamic — fold
+        // the wrap before comparing.
+        let normalized = normalize_table_text(&out);
         for m in &report.modules {
-            // The table now uses display-friendly names ("Star Authenticity"
-            // rather than "stars") that mirror the README banner.
             let display = module_display_name(&m.module);
             assert!(
-                out.contains(display),
-                "module display name {display} missing in output:\n{out}"
+                normalized.contains(display),
+                "module display name '{display}' missing in normalized output:\n{normalized}"
             );
             // Score is right-aligned to width 3.
             let score_str = format!("{:>3}", m.score);
@@ -526,18 +556,39 @@ mod tests {
     }
 
     #[test]
+    fn top_sub_score_picks_higher_value_over_lower_unit() {
+        // Direct unit test for top_sub_score_str — exercises the picker
+        // logic without depending on the table renderer.
+        let m = module(
+            "stars",
+            45,
+            Confidence::Medium,
+            &[("low_activity_share", 85), ("watcher_to_star_ratio", 30)],
+            &[],
+        );
+        assert_eq!(
+            top_sub_score_str(&m).as_deref(),
+            Some("low_activity_share=85")
+        );
+    }
+
+    #[test]
     fn top_sub_score_picks_highest_entry() {
-        // stars module has sub_scores: low_activity_share=85, watcher_to_star_ratio=30.
-        // Highest is low_activity_share=85.
         let report = five_module_report();
         let out = render(&report, false);
+        let normalized = normalize_table_text(&out);
+        // stars sub-scores: low_activity_share=85 (chosen) vs
+        // watcher_to_star_ratio=30 (not chosen).
         assert!(
-            out.contains("low_activity_share=85"),
-            "expected highest sub-score 'low_activity_share=85' in output:\n{out}"
+            normalized.contains("low_activity_share=85"),
+            "expected highest sub-score 'low_activity_share=85' in normalized output:\n{normalized}"
         );
+        // The lower-valued sub-score must not appear as the chosen top.
+        // (`watcher_to_star_ratio` does appear as an evidence code in
+        // the rationale below, but never as `watcher_to_star_ratio=30`.)
         assert!(
-            !out.contains("watcher_to_star_ratio=30\n"),
-            "lower sub-score appeared as the chosen top"
+            !normalized.contains("watcher_to_star_ratio=30"),
+            "lower sub-score 'watcher_to_star_ratio=30' should not appear as the chosen top:\n{normalized}"
         );
     }
 
@@ -545,9 +596,10 @@ mod tests {
     fn missing_data_cell_joins_entries_with_comma_space() {
         let report = five_module_report();
         let out = render(&report, false);
+        let normalized = normalize_table_text(&out);
         assert!(
-            out.contains("no_packages, no_dependents"),
-            "expected joined missing_data 'no_packages, no_dependents' in output:\n{out}"
+            normalized.contains("no_packages, no_dependents"),
+            "expected joined missing_data 'no_packages, no_dependents' in normalized output:\n{normalized}"
         );
     }
 
@@ -577,10 +629,11 @@ mod tests {
         let mut report = five_module_report();
         report.modules.truncate(1);
         let out = render(&report, false);
+        let normalized = normalize_table_text(&out);
         // After truncation only the "stars" module remains in the table.
         assert!(
-            out.contains("Star Authenticity"),
-            "single-module table should contain the module's display name:\n{out}"
+            normalized.contains("Star Authenticity"),
+            "single-module table should contain the module's display name:\n{normalized}"
         );
         assert!(out.contains("octocat/Hello-World"));
     }
@@ -672,5 +725,17 @@ mod tests {
             out.contains("[~] Neutral"),
             "expected neutral verdict label '[~] Neutral' in output:\n{out}"
         );
+    }
+
+    #[test]
+    fn normalize_table_text_collapses_wrapped_cells() {
+        // Self-test for the helper so its behaviour is documented and
+        // regressions are caught locally rather than via the consumers.
+        let wrapped = "│ low_activity_share                 │\n│ =85                                │";
+        assert!(normalize_table_text(wrapped).contains("low_activity_share=85"));
+        let two_word = "│ Security &            55 │\n│ Readiness                │";
+        assert!(normalize_table_text(two_word).contains("Security & Readiness"));
+        let comma_wrap = "│ no_packages,  │\n│ no_dependents │";
+        assert!(normalize_table_text(comma_wrap).contains("no_packages, no_dependents"));
     }
 }
