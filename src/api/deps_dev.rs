@@ -310,6 +310,80 @@ mod tests {
         assert_eq!(info.weekly_downloads, None);
     }
 
+    /// Real-world fixtures captured from `api.deps.dev` — see commit
+    /// message and `tests/fixtures/deps_dev/README.md` for capture
+    /// commands. Paths anchored at `CARGO_MANIFEST_DIR` so the tests
+    /// work under any cwd (CI runners do not always cd into the
+    /// package root before invoking cargo test — see E1.7 fix
+    /// commit `8c8ed7c`).
+    const FIXTURES: &[(&str, &[(&str, &str)])] = &[
+        // (fixture stem, list of (system, name) the fixture must contain)
+        (
+            "tokio-rs_tokio",
+            &[("CARGO", "tokio")],
+        ),
+        (
+            "django_django",
+            &[("PYPI", "django")],
+        ),
+        (
+            "kubernetes_kubernetes",
+            &[("GO", "github.com/kubernetes/kubernetes")],
+        ),
+    ];
+
+    #[test]
+    fn project_packages_response_parses_real_fixtures() {
+        for (stem, must_contain) in FIXTURES {
+            let path = format!(
+                "{}/tests/fixtures/deps_dev/{stem}.json",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            let body = std::fs::read(&path)
+                .unwrap_or_else(|e| panic!("missing fixture {path}: {e}"));
+            let parsed: ProjectPackagesResponse = serde_json::from_slice(&body)
+                .unwrap_or_else(|e| panic!("failed to parse {path}: {e}"));
+            assert!(
+                !parsed.packages.is_empty(),
+                "fixture {stem} must yield at least one PackageRef; got 0",
+            );
+            for (sys, name) in *must_contain {
+                assert!(
+                    parsed.packages.iter().any(|p| {
+                        p.system.eq_ignore_ascii_case(sys)
+                            && p.name.eq_ignore_ascii_case(name)
+                    }),
+                    "fixture {stem} must contain ({sys}, {name}); got {} unique pkgs starting with {:?}",
+                    parsed.packages.len(),
+                    parsed.packages.iter().take(5).collect::<Vec<_>>(),
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn project_packages_handles_legacy_flat_shape() {
+        // Defensive — if deps.dev ever flattens or simplifies the
+        // envelope, our parser still works (custom Deserialize on
+        // PackageRef accepts flat / packageKey / versionKey shapes).
+        let body = br#"{ "packages": [ { "system": "CARGO", "name": "x" } ] }"#;
+        let parsed: ProjectPackagesResponse = serde_json::from_slice(body).unwrap();
+        assert_eq!(parsed.packages.len(), 1);
+        assert_eq!(parsed.packages[0].name, "x");
+    }
+
+    #[test]
+    fn project_packages_handles_packagekey_nested_shape() {
+        // Architect's hypothesis from E1.9 — accept it too in case
+        // deps.dev ever switches the response shape from `versions`
+        // to `packages` while keeping the nested key.
+        let body = br#"{ "packages": [ { "packageKey": { "system": "NPM", "name": "lodash" } } ] }"#;
+        let parsed: ProjectPackagesResponse = serde_json::from_slice(body).unwrap();
+        assert_eq!(parsed.packages.len(), 1);
+        assert_eq!(parsed.packages[0].system, "NPM");
+        assert_eq!(parsed.packages[0].name, "lodash");
+    }
+
     #[test]
     fn package_ref_sorts_by_system_then_name() {
         let mut v = vec![
