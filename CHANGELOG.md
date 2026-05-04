@@ -48,6 +48,8 @@ The **scoring model** has its own SemVer separate from the CLI version. See [`do
 - `github::Client::get_user(login) -> UserProfile` added (24h TTL, `github:users:{login}` cache key).
 - `cli::scan::execute` now wires the **5-module Day-3 default set** (Stars + Activity + Maintainers + Adoption + Security); `select_modules()` default expanded. `tests/all_five_modules_integration.rs` invokes the compiled binary against a single wiremock fixture, verifies all 5 module results land in the JSON, asserts ≥3 evidence items per module, and a valid Category bucket on the aggregate.
 
+- Terminal report writer (`src/reports/terminal.rs::write`) end-to-end per `specs/reports-terminal.md`: 3-line header (`full_name — url`, `Score / Category / Confidence`, `Mode | Scoring | Snapshot`), 5-column `comfy_table` with `UTF8_BORDERS_ONLY` preset (Module / Score / Confidence / Top Sub-Score / Missing Data), Top strengths + Top concerns evidence sections, optional Caveats section (omitted when empty). Color palette per spec §2: Strong=green, Good=cyan, Mixed=yellow, Weak=`Color256(214)` orange, HighRisk=red; Confidence Low=dim, Medium=normal, High=bold. `color: bool` parameter forces `console::Style::force_styling(false)` so piped output emits zero ANSI escapes. `[+]` / `[-]` ASCII fallbacks replace ✔ / ✖ glyphs in plain mode. 11 unit tests in-module (header line, table rows, top sub-score selection, missing-data join, ANSI-suppression discipline, empty-caveats omission, single-module render, ANSI-emission with color, dim/bold confidence styling) + 1 insta snapshot test in `tests/reports_terminal_snapshot.rs` against the inactive-baseline fixture from spec §5.
+
 ### Notes
 - Pre-alpha. APIs and outputs will change before `v1.0.0`. Do not depend on this in production.
 
