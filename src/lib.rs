@@ -102,7 +102,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// SemVer of the scoring model. Bumped independently of the CLI version.
 ///
 /// See `docs/scoring-model.md` for the change log.
-pub const SCORING_VERSION: &str = "1.0.0";
+pub const SCORING_VERSION: &str = "1.1.0";
 
 /// JSON report schema version. Bumped on any breaking schema change.
 pub const REPORT_SCHEMA_VERSION: &str = "1.0.0";

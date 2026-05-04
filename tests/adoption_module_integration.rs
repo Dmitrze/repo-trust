@@ -173,10 +173,12 @@ async fn s001_well_documented_repo_runs_end_to_end() {
     assert!(!evidence.iter().any(|e| e.code == "no_readme"));
 }
 
-/// S-101: no published package falls back gracefully — Medium confidence,
-/// `no_packages` caveat in `missing_data`, no `weekly_downloads` sub-score.
+/// S-101: no published package AND no documentation falls back to Low
+/// confidence (scoring 1.1.0 ecosystem-coverage rule). `no_packages`
+/// caveat present in `missing_data`; `weekly_downloads` sub-score
+/// absent (deps.dev v3 dropped the field — see scoring-model 1.1.0).
 #[tokio::test]
-async fn s101_no_packages_falls_back_to_medium() {
+async fn s101_no_packages_no_docs_falls_back_to_low() {
     let server = MockServer::start().await;
     // README absent for this scenario — exercises the S-201 path too.
     shared_github_mocks(&server, false, false, false).await;
@@ -185,7 +187,7 @@ async fn s101_no_packages_falls_back_to_medium() {
     let module = repo_trust::modules::adoption::AdoptionModule;
     let (result, evidence) = module.run(&ctx).await.expect("adoption run");
 
-    assert_eq!(result.confidence, Confidence::Medium);
+    assert_eq!(result.confidence, Confidence::Low);
     assert!(
         result.missing_data.iter().any(|m| m == "no_packages"),
         "missing_data must contain `no_packages`; got {:?}",

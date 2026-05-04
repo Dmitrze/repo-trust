@@ -31,6 +31,12 @@ pub fn score(
     let mut missing: Vec<String> = Vec::new();
 
     // ─── 1. Weekly downloads (logarithmic banding) ─────────────────────────
+    // deps.dev v3 dropped this field in mid-2026 (see scoring-model 1.1.0
+    // change-log). The block is kept for the day downloads come back from
+    // some other source — when `weekly_downloads` is `Some`, the sub-score
+    // and evidence row are emitted additively. The scorer no longer uses
+    // download absence as a "no_packages" proxy; that gate is now
+    // anchored on `package_systems_count` directly (§3 below).
     if let Some(dl) = features.weekly_downloads {
         let s = downloads_to_score(dl, thresholds);
         sub_scores.insert("weekly_downloads".into(), s);
@@ -53,18 +59,6 @@ pub fn score(
                 thresholds.downloads_band_75,
                 thresholds.downloads_band_100,
             ),
-        });
-    } else {
-        // No published package — Neutral caveat per methodology §Module 4.
-        missing.push("no_packages".into());
-        evidence.push(EvidenceItem {
-            module: MODULE_NAME.into(),
-            code: "no_packages".into(),
-            label: "Repository publishes no package (or deps.dev returned no downloads)".into(),
-            value: json!(null),
-            threshold: None,
-            verdict: Verdict::Neutral,
-            rationale: "Repository publishes no package; documentation maturity is used as the only adoption signal. This is a caveat, not a concern — many excellent repos (research, docs, examples) publish no package.".into(),
         });
     }
 
@@ -122,25 +116,42 @@ pub fn score(
     }
 
     // ─── 3. Package systems count ──────────────────────────────────────────
+    // Sub-score is always present (drives the score arithmetic). The
+    // evidence row is split: `ecosystem_coverage` when ≥1 system is
+    // detected (positive for ≥2, neutral for 1); `no_packages` Neutral
+    // caveat when count == 0.
     let systems_score = systems_count_to_score(features.package_systems_count);
     sub_scores.insert("package_systems_count".into(), systems_score);
-    evidence.push(EvidenceItem {
-        module: MODULE_NAME.into(),
-        code: "package_systems".into(),
-        label: "Distinct package systems published".into(),
-        value: json!(features.package_systems),
-        threshold: None,
-        verdict: verdict_from_score(systems_score),
-        rationale: format!(
-            "{} distinct package system(s): {}. Cross-ecosystem packaging is a strong adoption signal.",
-            features.package_systems_count,
-            if features.package_systems.is_empty() {
-                "none".to_string()
+    if features.package_systems_count == 0 {
+        missing.push("no_packages".into());
+        evidence.push(EvidenceItem {
+            module: MODULE_NAME.into(),
+            code: "no_packages".into(),
+            label: "Repository publishes no package".into(),
+            value: json!(0),
+            threshold: None,
+            verdict: Verdict::Neutral,
+            rationale: "deps.dev returned no published packages mapped to this repository. Many healthy repos legitimately publish no package (research, dotfiles, manifests, example collections); the documentation-maturity signal carries the adoption score in that case.".into(),
+        });
+    } else {
+        evidence.push(EvidenceItem {
+            module: MODULE_NAME.into(),
+            code: "ecosystem_coverage".into(),
+            label: "Package ecosystem coverage".into(),
+            value: json!(features.package_systems),
+            threshold: None,
+            verdict: if features.package_systems_count >= 2 {
+                Verdict::Positive
             } else {
-                features.package_systems.join(", ")
+                Verdict::Neutral
             },
-        ),
-    });
+            rationale: format!(
+                "{} distinct package system(s) detected: {}. Cross-ecosystem packaging is a strong adoption signal.",
+                features.package_systems_count,
+                features.package_systems.join(", "),
+            ),
+        });
+    }
 
     // ─── 4. Awesome-list mentions (neutral baseline) ───────────────────────
     let awesome_score = awesome_to_score(features.awesome_list_mentions);
@@ -267,25 +278,48 @@ fn verdict_from_score(s: u8) -> Verdict {
     }
 }
 
-fn compute_confidence(features: &AdoptionFeatures, t: &AdoptionThresholds) -> Confidence {
-    if features.archived {
-        return Confidence::Low;
-    }
+/// Documentation-maturity threshold above which a repository is "well
+/// documented" for the purposes of Adoption confidence (scoring 1.1.0).
+///
+/// 0.50 corresponds to a substantial README (≥500 words) and nothing
+/// else, OR README ≥100 words plus a `docs/` directory. Either signal
+/// shows the maintainer cared enough to write user-facing docs.
+const MEDIUM_DOC_THRESHOLD: f64 = 0.50;
+
+/// Adoption Signals confidence (scoring v1.1.0+).
+///
+/// deps.dev v3 no longer exposes `weeklyDownloads` (verified empty
+/// across CARGO / NPM / GO / PYPI / MAVEN as of 2026-05-04, see
+/// `docs/scoring-model.md` 1.1.0 entry). The previous v1.0.0 rule
+/// gated `Confidence::High` on a downloads floor and is no longer
+/// satisfiable. The new rule grades confidence by the breadth of
+/// ecosystem evidence we actually receive:
+///
+/// - `High`: package(s) present in ≥1 ecosystem AND repository is
+///   not archived AND documentation maturity ≥ [`MEDIUM_DOC_THRESHOLD`].
+///   We have two independent signals that the project is published,
+///   maintained, and in active use.
+/// - `Medium`: packages present but repository archived; OR packages
+///   present but under-documented; OR no packages but docs are mature
+///   (suggests adoption in non-package form, e.g. a manifest or
+///   examples repository).
+/// - `Low`: no packages in any ecosystem AND no documentation depth.
+///
+/// `deps_dev_error == true` (the source itself was unavailable for
+/// this scan) short-circuits to `Low` regardless of the other
+/// signals — we genuinely don't know what we're missing.
+fn compute_confidence(features: &AdoptionFeatures, _t: &AdoptionThresholds) -> Confidence {
     if features.deps_dev_error {
         return Confidence::Low;
     }
-    if features.weekly_downloads.is_none() {
-        // No published package → Medium per methodology §Module 4.
-        return Confidence::Medium;
-    }
-    // High when downloads clear the floor; otherwise Medium.
-    if features
-        .weekly_downloads
-        .is_some_and(|d| d >= t.high_confidence_downloads_floor)
-    {
-        Confidence::High
-    } else {
-        Confidence::Medium
+    let has_packages = features.package_systems_count > 0;
+    let well_documented = features.documentation_maturity_score >= MEDIUM_DOC_THRESHOLD;
+    let archived = features.archived;
+
+    match (has_packages, archived, well_documented) {
+        (true, false, true) => Confidence::High,
+        (true, false, false) | (true, true, _) | (false, _, true) => Confidence::Medium,
+        (false, _, false) => Confidence::Low,
     }
 }
 
@@ -352,13 +386,18 @@ mod tests {
         );
     }
 
-    // S-101: no published package falls back gracefully.
+    // S-101: no published package + mature docs → Medium confidence
+    // (we still have the documentation signal even without packages).
+    // Per scoring 1.1.0 confidence rule: (false, _, true) → Medium.
     #[test]
-    fn s101_no_packages_medium_confidence_with_caveat() {
+    fn s101_no_packages_with_docs_falls_back_to_medium() {
         let mut f = baseline();
         f.has_readme = true;
-        f.readme_word_count = Some(400);
-        f.documentation_maturity_score = 0.35;
+        f.readme_word_count = Some(800);
+        f.has_docs_dir = true;
+        // README ≥500 words = 0.50; +docs/ = 0.80; well above the
+        // MEDIUM_DOC_THRESHOLD of 0.50.
+        f.documentation_maturity_score = 0.80;
         let (r, ev) = score(&f, &AdoptionThresholds::v1());
         assert_eq!(r.confidence, Confidence::Medium);
         assert!(r.missing_data.iter().any(|m| m == "no_packages"));
@@ -367,7 +406,8 @@ mod tests {
             .find(|e| e.code == "no_packages")
             .expect("no_packages evidence");
         assert!(matches!(np.verdict, Verdict::Neutral));
-        // Module score is computed from the present sub-scores only.
+        // Module score is computed from the present sub-scores only —
+        // weekly_downloads is omitted (deps.dev v3 no longer exposes it).
         assert!(!r.sub_scores.contains_key("weekly_downloads"));
     }
 
@@ -389,13 +429,16 @@ mod tests {
         assert!(matches!(cav.verdict, Verdict::Neutral));
     }
 
-    // S-103: archived repo demotes to Low confidence + caveat.
+    // S-103: archived repo demotes to Medium + emits the archived caveat.
+    // Per scoring 1.1.0: archived-but-published is Medium (rather than
+    // the previous Low) because the package is still distributed and
+    // resolvable; the archive flag means "no new versions", not "broken".
     #[test]
-    fn s103_archived_demotes_to_low_confidence() {
+    fn s103_archived_demotes_to_medium_confidence() {
         let mut f = popular();
         f.archived = true;
         let (r, ev) = score(&f, &AdoptionThresholds::v1());
-        assert_eq!(r.confidence, Confidence::Low);
+        assert_eq!(r.confidence, Confidence::Medium);
         assert!(r.missing_data.iter().any(|m| m == "archived"));
         assert!(ev.iter().any(|e| e.code == "archived"));
     }
@@ -525,12 +568,120 @@ mod tests {
         ));
     }
 
+    // ─── 1.1.0 ecosystem-coverage confidence rule ──────────────────────────
+    //
+    // Replaces the v1.0.0 downloads-floor rule. See the doc comment on
+    // `compute_confidence` for the truth table.
+
     #[test]
-    fn high_confidence_requires_downloads_floor() {
-        // 5k downloads is below the 10k floor → Medium even with everything else.
-        let mut f = popular();
-        f.weekly_downloads = Some(5_000);
+    fn confidence_high_when_packages_and_documented_and_not_archived() {
+        let mut f = baseline();
+        f.package_systems = vec!["CARGO".into(), "GO".into()];
+        f.package_systems_count = 2;
+        f.archived = false;
+        f.documentation_maturity_score = 0.70;
+        f.weekly_downloads = None; // v3 reality
+        let (r, _) = score(&f, &AdoptionThresholds::v1());
+        assert_eq!(r.confidence, Confidence::High);
+    }
+
+    #[test]
+    fn confidence_medium_when_packages_but_underdocumented() {
+        let mut f = baseline();
+        f.package_systems = vec!["NPM".into()];
+        f.package_systems_count = 1;
+        f.archived = false;
+        f.documentation_maturity_score = 0.20;
+        f.weekly_downloads = None;
         let (r, _) = score(&f, &AdoptionThresholds::v1());
         assert_eq!(r.confidence, Confidence::Medium);
+    }
+
+    #[test]
+    fn confidence_medium_when_archived_even_with_packages() {
+        let mut f = baseline();
+        f.package_systems = vec!["CARGO".into(), "NPM".into(), "GO".into()];
+        f.package_systems_count = 3;
+        f.archived = true;
+        f.documentation_maturity_score = 0.90;
+        let (r, _) = score(&f, &AdoptionThresholds::v1());
+        assert_eq!(r.confidence, Confidence::Medium);
+    }
+
+    #[test]
+    fn confidence_medium_when_no_packages_but_documented() {
+        let mut f = baseline();
+        f.package_systems_count = 0;
+        f.archived = false;
+        f.documentation_maturity_score = 0.70;
+        let (r, _) = score(&f, &AdoptionThresholds::v1());
+        assert_eq!(r.confidence, Confidence::Medium);
+    }
+
+    #[test]
+    fn confidence_low_when_no_packages_and_underdocumented() {
+        let mut f = baseline();
+        f.package_systems_count = 0;
+        f.archived = false;
+        f.documentation_maturity_score = 0.10;
+        let (r, _) = score(&f, &AdoptionThresholds::v1());
+        assert_eq!(r.confidence, Confidence::Low);
+    }
+
+    #[test]
+    fn no_packages_evidence_only_fires_when_count_is_zero() {
+        // Repos that DO publish must NOT emit no_packages — they get
+        // ecosystem_coverage instead.
+        let mut f = baseline();
+        f.package_systems = vec!["CARGO".into(), "GO".into()];
+        f.package_systems_count = 2;
+        let (_r, ev) = score(&f, &AdoptionThresholds::v1());
+        assert!(
+            !ev.iter().any(|e| e.code == "no_packages"),
+            "no_packages must not fire when package_systems_count > 0; got: {:?}",
+            ev.iter().map(|e| &e.code).collect::<Vec<_>>(),
+        );
+        assert!(
+            ev.iter().any(|e| e.code == "ecosystem_coverage"),
+            "expected ecosystem_coverage evidence row; got: {:?}",
+            ev.iter().map(|e| &e.code).collect::<Vec<_>>(),
+        );
+    }
+
+    #[test]
+    fn ecosystem_coverage_evidence_positive_when_two_or_more_systems() {
+        let mut f = baseline();
+        f.package_systems = vec!["CARGO".into(), "GO".into()];
+        f.package_systems_count = 2;
+        let (_r, ev) = score(&f, &AdoptionThresholds::v1());
+        let item = ev
+            .iter()
+            .find(|e| e.code == "ecosystem_coverage")
+            .expect("ecosystem_coverage evidence");
+        assert!(matches!(item.verdict, Verdict::Positive));
+    }
+
+    #[test]
+    fn ecosystem_coverage_evidence_neutral_when_single_system() {
+        let mut f = baseline();
+        f.package_systems = vec!["NPM".into()];
+        f.package_systems_count = 1;
+        let (_r, ev) = score(&f, &AdoptionThresholds::v1());
+        let item = ev
+            .iter()
+            .find(|e| e.code == "ecosystem_coverage")
+            .expect("ecosystem_coverage evidence");
+        assert!(matches!(item.verdict, Verdict::Neutral));
+    }
+
+    #[test]
+    fn deps_dev_error_short_circuits_confidence_to_low() {
+        // Even with all the right ecosystem-coverage signals, an
+        // outage on the source itself drops confidence to Low — we
+        // genuinely don't know what we're missing.
+        let mut f = popular();
+        f.deps_dev_error = true;
+        let (r, _) = score(&f, &AdoptionThresholds::v1());
+        assert_eq!(r.confidence, Confidence::Low);
     }
 }
