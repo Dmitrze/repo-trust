@@ -1,10 +1,5 @@
 //! Terminal output — the colored summary shown by default.
 //!
-//! See `specs/reports-terminal.md` for the contract and
-//! `tests/scenarios/reports-terminal.md` for the BDD scenarios that drive
-//! the unit tests in this module and the snapshot test in
-//! `tests/reports_terminal_snapshot.rs`.
-//!
 //! Output shape (≤ 30 lines, ≤ 80 cols target):
 //!
 //! ```text
@@ -12,25 +7,33 @@
 //! Score: NN  Category: X  Confidence: Y
 //! Mode: standard | Scoring: 1.0.0 | Snapshot: <iso8601>
 //!
-//! ┌──────────────┬───────┬────────────┬──────────────────┬──────────────┐
-//! │ Module       │ Score │ Confidence │ Top Sub-Score    │ Missing Data │
-//! ├──────────────┼───────┼────────────┼──────────────────┼──────────────┤
-//! │ stars        │   45  │ Medium     │ low_share=85     │              │
-//! │ ...                                                                  │
-//! └──────────────┴───────┴────────────┴──────────────────┴──────────────┘
+//! ┌────────────────────┬───────┬────────────┬──────────────────┬──────────────┐
+//! │ Module             │ Score │ Confidence │ Top Sub-Score    │ Missing Data │
+//! ├────────────────────┼───────┼────────────┼──────────────────┼──────────────┤
+//! │ Star Authenticity  │   45  │ Medium     │ low_share=85     │              │
+//! │ ...                                                                        │
+//! └────────────────────┴───────┴────────────┴──────────────────┴──────────────┘
 //!
 //! Top strengths
-//!   ✔ [security] documentation_presence — ...
+//!   ✔ Positive [security] documentation_presence — ...
 //!
 //! Top concerns
-//!   ✖ [activity] no_commits_in_window — ...
+//!   ✖ HighRisk [activity] no_commits_in_window — ...
 //!
 //! Caveats
 //!   - osv_deferred_to_phase_3
 //! ```
 //!
-//! When `color = false`, no ANSI escape sequences are emitted; the
-//! checkmark / cross glyphs become `[+]` / `[-]` for plain-ASCII friendliness.
+//! Section titles ("Top strengths" / "Top concerns") are colored green / red
+//! when `color = true`. Per-item glyph and verdict label are colored by the
+//! item's `Verdict`: Positive (green ✔), Concerning (yellow ✖),
+//! HighRisk (red ✖). Module names in the table use display-friendly forms
+//! ("Star Authenticity" rather than "stars") that mirror the README banner.
+//!
+//! When `color = false`, no ANSI escape sequences are emitted; the glyphs
+//! become `[+]` / `[!]` / `[-]` for Positive / Concerning / HighRisk
+//! respectively, for plain-ASCII friendliness. The output is verified by
+//! the snapshot test in `tests/reports_terminal_snapshot.rs`.
 
 use std::io::Write;
 
@@ -40,14 +43,16 @@ use comfy_table::{
 use console::{Color, Style};
 use time::format_description::well_known::Iso8601;
 
-use crate::models::{Category, Confidence, EvidenceItem, ModuleResult, TrustReport};
+use crate::models::{
+    evidence::Verdict, Category, Confidence, EvidenceItem, ModuleResult, TrustReport,
+};
 
 /// Write a human-friendly summary of the trust report to `w`.
 ///
 /// `color = true` emits ANSI escape sequences for category-colored
-/// score cells, dim/normal/bold confidence styling, and green/red
-/// glyphs for strengths/concerns. `color = false` emits zero ANSI
-/// sequences — safe for piping into `cat`, files, or CI logs.
+/// score cells, dim/normal/bold confidence styling, green/red section
+/// titles, and per-verdict glyph + label colors. `color = false` emits
+/// zero ANSI sequences — safe for piping into `cat`, files, or CI logs.
 ///
 /// # Errors
 ///
@@ -70,14 +75,12 @@ pub fn write<W: Write>(report: &TrustReport, w: &mut W, color: bool) -> std::io:
 // ─── Header ────────────────────────────────────────────────────────────
 
 fn write_header<W: Write>(report: &TrustReport, w: &mut W, color: bool) -> std::io::Result<()> {
-    // Line 1: full_name — url
     writeln!(
         w,
         "{} — {}",
         report.repository.full_name, report.repository.url
     )?;
 
-    // Line 2: Score / Category / Confidence
     let cat_label = paint(
         category_label(report.category).to_string(),
         category_console_color(report.category),
@@ -92,7 +95,6 @@ fn write_header<W: Write>(report: &TrustReport, w: &mut W, color: bool) -> std::
         conf = conf_label,
     )?;
 
-    // Line 3: Mode / Scoring / Snapshot
     let snapshot = report
         .snapshot_at
         .format(&Iso8601::DEFAULT)
@@ -138,7 +140,7 @@ fn write_module_table<W: Write>(
         let missing = m.missing_data.join(", ");
 
         table.add_row(vec![
-            Cell::new(&m.module),
+            Cell::new(module_display_name(&m.module)),
             score_cell,
             conf_cell,
             Cell::new(top_sub),
@@ -166,31 +168,40 @@ fn top_sub_score_str(m: &ModuleResult) -> Option<String> {
 fn write_evidence_section<W: Write>(
     title: &str,
     items: &[EvidenceItem],
-    positive: bool,
+    is_strengths_section: bool,
     w: &mut W,
     color: bool,
 ) -> std::io::Result<()> {
-    writeln!(w, "{title}")?;
+    // Section title is colored green for strengths, red for concerns,
+    // matching the README terminal mockup (`assets/terminal.svg`).
+    let title_color = if is_strengths_section {
+        Color::Green
+    } else {
+        Color::Red
+    };
+    writeln!(w, "{}", paint(title.to_string(), title_color, color))?;
+
     if items.is_empty() {
         writeln!(w, "  (none)")?;
         return Ok(());
     }
-    let glyph = if color {
-        if positive {
-            paint("✔".to_string(), Color::Green, true)
-        } else {
-            paint("✖".to_string(), Color::Red, true)
-        }
-    } else if positive {
-        "[+]".to_string()
-    } else {
-        "[-]".to_string()
-    };
 
     for item in items {
+        let (glyph_char, fallback, verdict_color, verdict_text) = match item.verdict {
+            Verdict::Positive => ("✔", "[+]", Color::Green, "Positive"),
+            Verdict::Concerning => ("✖", "[!]", Color::Yellow, "Concerning"),
+            Verdict::HighRisk => ("✖", "[-]", Color::Red, "HighRisk"),
+        };
+        let glyph = if color {
+            paint(glyph_char.to_string(), verdict_color, true)
+        } else {
+            fallback.to_string()
+        };
+        let label = paint(verdict_text.to_string(), verdict_color, color);
+
         writeln!(
             w,
-            "  {glyph} [{module}] {code} — {rationale}",
+            "  {glyph} {label} [{module}] {code} — {rationale}",
             module = item.module,
             code = item.code,
             rationale = item.rationale,
@@ -210,6 +221,20 @@ fn write_caveats_section<W: Write>(caveats: &[String], w: &mut W) -> std::io::Re
 }
 
 // ─── Helpers: labels and colors ────────────────────────────────────────
+
+/// Map a module ID to its display-friendly name shown in the README banner
+/// and the terminal table. Unknown IDs pass through unchanged so future
+/// modules render gracefully without code changes.
+fn module_display_name(id: &str) -> &str {
+    match id {
+        "stars" => "Star Authenticity",
+        "activity" => "Activity Health",
+        "maintainers" => "Maintainer Health",
+        "adoption" => "Adoption Signals",
+        "security" => "Security & Readiness",
+        _ => id,
+    }
+}
 
 const fn category_label(c: Category) -> &'static str {
     match c {
@@ -460,21 +485,37 @@ mod tests {
     }
 
     #[test]
-    fn module_table_contains_all_module_names_and_scores() {
+    fn module_table_contains_all_module_display_names_and_scores() {
         let report = five_module_report();
         let out = render(&report, false);
         for m in &report.modules {
+            // The table now uses display-friendly names ("Star Authenticity"
+            // rather than "stars") that mirror the README banner.
+            let display = module_display_name(&m.module);
             assert!(
-                out.contains(&m.module),
-                "module {} missing in output:\n{out}",
-                m.module
+                out.contains(display),
+                "module display name {display} missing in output:\n{out}"
             );
-            // The score is right-aligned to width 3; check the digits appear at least once.
+            // Score is right-aligned to width 3.
             let score_str = format!("{:>3}", m.score);
             assert!(
                 out.contains(&score_str),
                 "score {} missing in output:\n{out}",
                 m.score
+            );
+        }
+    }
+
+    #[test]
+    fn module_id_appears_in_evidence_brackets() {
+        // The evidence section retains the short module ID in [brackets]
+        // for compactness; the table uses display names.
+        let report = five_module_report();
+        let out = render(&report, false);
+        for id in ["stars", "activity", "maintainers", "adoption", "security"] {
+            assert!(
+                out.contains(&format!("[{id}]")),
+                "[{id}] missing in evidence section:\n{out}"
             );
         }
     }
@@ -489,10 +530,6 @@ mod tests {
             out.contains("low_activity_share=85"),
             "expected highest sub-score 'low_activity_share=85' in output:\n{out}"
         );
-        // Ensure the lower value is NOT formatted as the top.
-        // (It may still appear elsewhere; we only check it's not the chosen top.)
-        // We verify by looking for the `=30` style cell text in proximity to stars row.
-        // Simpler: just ensure the higher beat the lower.
         assert!(
             !out.contains("watcher_to_star_ratio=30\n"),
             "lower sub-score appeared as the chosen top"
@@ -535,11 +572,11 @@ mod tests {
         let mut report = five_module_report();
         report.modules.truncate(1);
         let out = render(&report, false);
+        // After truncation only the "stars" module remains in the table.
         assert!(
-            out.contains("stars"),
-            "single-module table should still contain the module name:\n{out}"
+            out.contains("Star Authenticity"),
+            "single-module table should contain the module's display name:\n{out}"
         );
-        // Header should still be present.
         assert!(out.contains("octocat/Hello-World"));
     }
 
@@ -555,7 +592,6 @@ mod tests {
 
     #[test]
     fn confidence_low_styled_dim_when_color() {
-        // dim is ESC[2m
         let styled = confidence_styled(Confidence::Low, true);
         assert!(
             styled.contains("\x1b[2m") || styled.contains("\x1b[2;"),
@@ -565,7 +601,6 @@ mod tests {
 
     #[test]
     fn confidence_high_styled_bold_when_color() {
-        // bold is ESC[1m
         let styled = confidence_styled(Confidence::High, true);
         assert!(
             styled.contains("\x1b[1m") || styled.contains("\x1b[1;"),
@@ -577,5 +612,41 @@ mod tests {
     fn top_sub_score_none_when_empty() {
         let m = module("empty", 0, Confidence::Low, &[], &[]);
         assert!(top_sub_score_str(&m).is_none());
+    }
+
+    #[test]
+    fn module_display_name_maps_known_ids() {
+        assert_eq!(module_display_name("stars"), "Star Authenticity");
+        assert_eq!(module_display_name("activity"), "Activity Health");
+        assert_eq!(module_display_name("maintainers"), "Maintainer Health");
+        assert_eq!(module_display_name("adoption"), "Adoption Signals");
+        assert_eq!(module_display_name("security"), "Security & Readiness");
+    }
+
+    #[test]
+    fn module_display_name_passes_unknown_ids_through() {
+        // Future modules (e.g. "governance") should render gracefully
+        // without code changes — they appear by their ID until added here.
+        assert_eq!(module_display_name("governance"), "governance");
+        assert_eq!(module_display_name(""), "");
+    }
+
+    #[test]
+    fn evidence_includes_verdict_label_in_plain_mode() {
+        let report = five_module_report();
+        let out = render(&report, false);
+        // Each evidence line carries the verdict label after the glyph.
+        assert!(
+            out.contains("[+] Positive"),
+            "expected positive verdict label '[+] Positive' in output:\n{out}"
+        );
+        assert!(
+            out.contains("[-] HighRisk"),
+            "expected high-risk verdict label '[-] HighRisk' in output:\n{out}"
+        );
+        assert!(
+            out.contains("[!] Concerning"),
+            "expected concerning verdict label '[!] Concerning' in output:\n{out}"
+        );
     }
 }
