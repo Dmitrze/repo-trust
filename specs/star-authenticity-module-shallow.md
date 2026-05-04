@@ -136,6 +136,25 @@ For the `total_stars < 50` scenario:
 
 - Should the 5pp leniency apply to ratio thresholds too? Day 3 v1: no — ratios are repo-level and should not depend on age. Tune if benchmark surfaces young-repo false positives.
 
+### Caveat — recency-biased sample (Day-4 architect Q1 follow-through, 2026-05-04)
+
+The Day-3 collector fetches the most-recent N stargazers via
+`github::Client::list_stargazers(max=N)` and treats them as the sample
+without further sub-sampling. This is **recency-biased**: for a 1000-star
+repo asking for 200, we get the 200 most-recent stargazers (skewed toward
+fresh accounts). The seeded `ChaCha20Rng` from `utils::sampling` is
+therefore unused in the Day-3 / Day-4 Stars collector.
+
+The methodology calls for "uniform random over GitHub's stargazer
+pagination" — true uniform sampling is **deferred to Phase 2 deep mode**
+(when the deep-mode budget allows fetching the full population, then
+sampling N from it). Until then, the Stars module emits a Neutral
+`recency_biased_sample` evidence item on every non-below-floor run so
+reports are explicit about the sampling bias.
+
+This caveat is co-located here for historical Day-3 record; see
+`specs/star-authenticity-lockstep.md` §3 for the Day-4 evidence wiring.
+
 ---
 
 ## 10. Closed questions (history)

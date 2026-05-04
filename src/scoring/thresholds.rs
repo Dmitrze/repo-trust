@@ -158,6 +158,16 @@ pub struct StarsThresholds {
     pub young_repo_leniency_pp: f64,
     /// Minimum stars to attempt sampling.
     pub min_stars_to_sample: u64,
+    /// Lockstep z-score bands per `methodology.md` §Heuristic 2 v1:
+    /// `<3 → 100, 3-5 → 85, 5-8 → 60, 8-12 → 30, >12 → 10`. Each entry is
+    /// `(ceiling, sub-score)`; first entry whose ceiling ≥ z wins.
+    pub lockstep_score_bands: [(f64, u8); 5],
+    /// Combined-signal threshold: H1 share ≥ this AND H2 z ≥
+    /// `combined_z_threshold` together emit the combined-evidence item per
+    /// methodology §Heuristic 2 caveats.
+    pub combined_low_activity_threshold: f64,
+    /// Combined-signal z threshold (paired with the share threshold above).
+    pub combined_z_threshold: f64,
 }
 
 impl StarsThresholds {
@@ -180,6 +190,15 @@ impl StarsThresholds {
             young_repo_age_days: 180,
             young_repo_leniency_pp: 0.05,
             min_stars_to_sample: 50,
+            lockstep_score_bands: [
+                (3.0, 100),
+                (5.0, 85),
+                (8.0, 60),
+                (12.0, 30),
+                (f64::INFINITY, 10),
+            ],
+            combined_low_activity_threshold: 0.20,
+            combined_z_threshold: 5.0,
         }
     }
 }

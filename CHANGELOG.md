@@ -9,6 +9,7 @@ The **scoring model** has its own SemVer separate from the CLI version. See [`do
 ## [Unreleased]
 
 ### Added
+- Star Authenticity — Heuristic 2 (lockstep timing z-score) lands; module reaches its full v1.0 form. `lockstep_z_score` computed over the daily star series with a 28-day rolling baseline lagged 7 days; bands `<3 → 100, 3-5 → 85, 5-8 → 60, 8-12 → 30, >12 → 10` per `methodology.md` §Heuristic 2. Final formula reverts to the methodology v1 weights `0.55 × H1 + 0.30 × H2 + 0.15 × H3`; falls back to `0.55 × H1 + 0.45 × H3` when H2 is `None` (short series or no `starred_at` timestamps). The Day-3 `lockstep_deferred_to_day_4` caveat-evidence is removed; replaced by a real `lockstep_z_score` evidence (Concerning ceiling) plus a `lockstep_window_too_short` Neutral caveat for the < 35-day case. New `combined_low_activity_and_lockstep` Concerning evidence emitted when both H1 ≥ 20% AND H2 ≥ 5 (per methodology caveats). New `recency_biased_sample` Neutral evidence on every non-below-floor run (Day-3 architect Q1 follow-through). `specs/star-authenticity-module-shallow.md` §9 amended with the recency-bias caveat. `StarsThresholds::v1()` extended with `lockstep_score_bands`, `combined_low_activity_threshold`, `combined_z_threshold`. 6 new lockstep-z-score features unit tests + 6 new scorer unit tests + 1 amended scorer test that asserts no Day-3 deferred caveat remains.
 - Foundation documents: PRD, architecture, methodology plan
 - Apache-2.0 license; methodology docs additionally under CC-BY-4.0
 - Code of Conduct (Contributor Covenant 2.1)

@@ -1,16 +1,17 @@
-//! Star Authenticity scorer (Day 3 — shallow).
+//! Star Authenticity scorer (Day 4 — full).
 //!
-//! Implements Heuristic 1 (low-activity profile share, 6-band table) and
-//! Heuristic 3 (fork/watcher ratios with ecosystem multipliers) per
-//! `docs/methodology.md` §Module 1. Final formula for Day 3:
-//! `0.55 × H1 + 0.45 × H3` (the lockstep H2 weight of 0.30 is redistributed
-//! to H3 until H2 ships Day 4 and weights revert to 0.55 / 0.30 / 0.15).
+//! Implements Heuristic 1 (low-activity profile share, 6-band table),
+//! Heuristic 2 (lockstep timing z-score), and Heuristic 3 (fork/watcher
+//! ratios with ecosystem multipliers) per `docs/methodology.md` §Module 1.
+//! Final formula: `0.55 × H1 + 0.30 × H2 + 0.15 × H3` per methodology v1.0.
+//! Falls back to `0.55 × H1 + 0.45 × H3` when H2 is `None` (short series
+//! or no `starred_at` timestamps).
 //!
 //! Critical posture: rationale uses **only probabilistic phrasing** — the
 //! words "fake", "fraud", "bot" do not appear in any code under this file
 //! per `CLAUDE.md` §14 (Glossary).
-//! Verdict ceiling for Heuristic 1 is `Concerning` — never `HighRisk`
-//! standalone.
+//! Verdict ceiling stays `Concerning` even when combined H1+H2 evidence is
+//! emitted — never `HighRisk` standalone.
 
 use std::collections::BTreeMap;
 
@@ -148,24 +149,101 @@ pub fn score(
         ),
     });
 
-    // ─── Day-3 weighted formula: 0.55 × H1 + 0.45 × H3 ──────────────────
-    let final_score: u8 = match h1_score {
-        Some(h1) => {
+    // ─── Heuristic 2 — lockstep timing z-score ──────────────────────────
+    let h2_score: Option<u8> = if let Some(z) = features.lockstep_z_score {
+        let s = bucket_lockstep(z, &thresholds.lockstep_score_bands);
+        sub_scores.insert("lockstep_z_score".into(), s);
+        evidence.push(EvidenceItem {
+            module: MODULE_NAME.into(),
+            code: "lockstep_z_score".into(),
+            label: "Lockstep timing — max daily z-score over 28-day baseline".into(),
+            value: json!(crate::utils::time::round6(z)),
+            threshold: Some(json!({
+                "bands": thresholds.lockstep_score_bands.iter()
+                    .map(|(c, s)| serde_json::json!([if c.is_finite() { json!(c) } else { json!("infinity") }, s]))
+                    .collect::<Vec<_>>(),
+            })),
+            verdict: stars_verdict(s),
+            rationale: format!(
+                "Max daily z-score = {:.2} over a rolling 28-day baseline lagged 7 days. ≥5 indicates a starring burst; ≥3 a notable spike.",
+                z
+            ),
+        });
+        Some(s)
+    } else {
+        evidence.push(EvidenceItem {
+            module: MODULE_NAME.into(),
+            code: "lockstep_window_too_short".into(),
+            label: "Lockstep timing window unavailable".into(),
+            value: json!(null),
+            threshold: None,
+            verdict: Verdict::Neutral,
+            rationale: "Sample spans fewer than 35 days (28 baseline + 7 lag) or carries no starred_at timestamps. Heuristic 2 contribution is dropped from the final formula.".into(),
+        });
+        None
+    };
+
+    // ─── Day-4 weighted formula: 0.55 × H1 + 0.30 × H2 + 0.15 × H3 ──────
+    // When H2 is unavailable, fall back to the Day-3 redistribution
+    // (0.55 × H1 + 0.45 × H3) so the module still produces a reasonable score.
+    let final_score: u8 = match (h1_score, h2_score) {
+        (Some(h1), Some(h2)) => {
+            let raw = 0.55 * f64::from(h1) + 0.30 * f64::from(h2) + 0.15 * f64::from(h3_score);
+            raw.round().clamp(0.0, 100.0) as u8
+        },
+        (Some(h1), None) => {
             let raw = 0.55 * f64::from(h1) + 0.45 * f64::from(h3_score);
             raw.round().clamp(0.0, 100.0) as u8
         },
-        None => h3_score, // Sample empty — ratios alone.
+        (None, Some(h2)) => {
+            // Sample empty (Quick mode) but z-score available somehow:
+            // weight H2 + H3 evenly.
+            let raw = 0.50 * f64::from(h2) + 0.50 * f64::from(h3_score);
+            raw.round().clamp(0.0, 100.0) as u8
+        },
+        (None, None) => h3_score, // Ratios alone.
     };
 
-    // Lockstep deferred caveat — explicit so reports don't silently miss H2.
+    // ─── Combined H1+H2 evidence (Concerning, never HighRisk) ───────────
+    if let (Some(share), Some(z)) = (features.low_activity_share, features.lockstep_z_score) {
+        if share >= thresholds.combined_low_activity_threshold
+            && z >= thresholds.combined_z_threshold
+        {
+            evidence.push(EvidenceItem {
+                module: MODULE_NAME.into(),
+                code: "combined_low_activity_and_lockstep".into(),
+                label: "Combined Heuristic 1 + Heuristic 2 signal".into(),
+                value: json!({
+                    "low_activity_share": crate::utils::time::round6(share),
+                    "lockstep_z_score": crate::utils::time::round6(z),
+                }),
+                threshold: Some(json!({
+                    "low_activity_share": thresholds.combined_low_activity_threshold,
+                    "lockstep_z_score": thresholds.combined_z_threshold,
+                })),
+                // Methodology requires BOTH signals before lowering the
+                // module score band. Verdict ceiling stays Concerning per
+                // CLAUDE.md §14.
+                verdict: Verdict::Concerning,
+                rationale: format!(
+                    "Both signals present: {:.1}% of sampled stargazers match the low-activity profile AND the daily star series shows a max z-score of {:.2}. Methodology recommends treating this combination as Concerning.",
+                    share * 100.0, z,
+                ),
+            });
+        }
+    }
+
+    // ─── Recency-bias evidence (Day-3 follow-through, Q1) ───────────────
+    // Emitted on every non-below-floor run so reports are explicit about the
+    // sampling bias. True uniform sampling lands in Phase 2 deep mode.
     evidence.push(EvidenceItem {
         module: MODULE_NAME.into(),
-        code: "lockstep_deferred_to_day_4".into(),
-        label: "Heuristic 2 (lockstep timing) deferred".into(),
-        value: json!(null),
+        code: "recency_biased_sample".into(),
+        label: "Stargazer sample is recency-biased".into(),
+        value: json!(features.sample_size),
         threshold: None,
         verdict: Verdict::Neutral,
-        rationale: "Day 3 ships Heuristics 1 + 3 only. The lockstep z-score lands Day 4; weights revert to 0.55/0.30/0.15 then.".into(),
+        rationale: "Day 3-4 sampling is recency-biased: the most-recent N stargazers are sampled directly. True uniform random sampling over the full stargazer history is deferred to Phase 2 deep mode.".into(),
     });
 
     // ─── Sample-size confidence demotion ────────────────────────────────
@@ -240,6 +318,17 @@ fn bucket_low_activity(share: f64, bands: &[(f64, u8); 6]) -> u8 {
     0
 }
 
+/// Bucket a lockstep z-score into a sub-score per the configured bands
+/// (`<3 → 100, 3-5 → 85, 5-8 → 60, 8-12 → 30, >12 → 10` by default).
+fn bucket_lockstep(z: f64, bands: &[(f64, u8); 5]) -> u8 {
+    for (ceiling, sub_score) in bands {
+        if z <= *ceiling {
+            return *sub_score;
+        }
+    }
+    bands.last().map(|(_, s)| *s).unwrap_or(0)
+}
+
 /// Map an observed ratio against an ecosystem-adjusted healthy threshold.
 /// Linear: ≥ healthy → 100; ≤ 0 → 0; otherwise scaled by `actual / healthy`.
 fn ratio_score(actual: f64, healthy: f64) -> u8 {
@@ -288,6 +377,7 @@ mod tests {
             fork_to_star_ratio: 0.10,
             watcher_to_star_ratio: 0.01,
             low_activity_share: Some(0.04),
+            lockstep_z_score: Some(2.0), // smooth distribution → H2 = 100
             sample_size: 200,
             primary_language: Some("Rust".into()),
             repo_age_days: 365 * 3,
@@ -304,23 +394,95 @@ mod tests {
         assert!(ev.iter().any(|e| e.code == "low_activity_stargazer_share"));
         assert!(ev.iter().any(|e| e.code == "fork_to_star_ratio"));
         assert!(ev.iter().any(|e| e.code == "watcher_to_star_ratio"));
-        assert!(ev.iter().any(|e| e.code == "lockstep_deferred_to_day_4"));
+        assert!(ev.iter().any(|e| e.code == "lockstep_z_score"));
+        assert!(ev.iter().any(|e| e.code == "recency_biased_sample"));
+        assert!(
+            !ev.iter().any(|e| e.code == "lockstep_deferred_to_day_4"),
+            "Day-3 deferred caveat should be gone now that H2 ships"
+        );
     }
 
     #[test]
     fn suspicious_profile_lowers_score_to_concerning_not_highrisk() {
         let mut f = baseline();
         f.low_activity_share = Some(0.38);
+        f.lockstep_z_score = Some(8.0); // bursty pattern
         f.fork_to_star_ratio = 0.005;
         f.watcher_to_star_ratio = 0.0005;
         let (r, ev) = score(&f, &StarsThresholds::v1());
-        assert!(r.score <= 30, "expected ≤30, got {}", r.score);
+        // Day-4 formula: 0.55 × 20 (H1=20 for 38%) + 0.30 × 30 (H2=30 for z=8) + 0.15 × ~50 (H3 ratios)
+        //              ≈ 11 + 9 + 7.5 ≈ 28-32.
+        assert!(r.score <= 35, "expected ≤35, got {}", r.score);
         let h1 = ev
             .iter()
             .find(|e| e.code == "low_activity_stargazer_share")
             .unwrap();
         // Verdict ceiling: Concerning, never HighRisk standalone.
         assert!(matches!(h1.verdict, Verdict::Concerning));
+        // Combined H1+H2 evidence should fire (share ≥ 0.20 AND z ≥ 5).
+        let combined = ev
+            .iter()
+            .find(|e| e.code == "combined_low_activity_and_lockstep")
+            .expect("combined evidence missing");
+        assert!(matches!(combined.verdict, Verdict::Concerning));
+    }
+
+    #[test]
+    fn lockstep_window_too_short_falls_back_to_h3_redistribution() {
+        let mut f = baseline();
+        f.lockstep_z_score = None;
+        let (r, ev) = score(&f, &StarsThresholds::v1());
+        assert!(ev.iter().any(|e| e.code == "lockstep_window_too_short"));
+        assert!(!r.sub_scores.contains_key("lockstep_z_score"));
+    }
+
+    #[test]
+    fn lockstep_smooth_z_score_full_credit() {
+        let mut f = baseline();
+        f.lockstep_z_score = Some(2.5);
+        let (r, _) = score(&f, &StarsThresholds::v1());
+        assert_eq!(r.sub_scores.get("lockstep_z_score").copied(), Some(100));
+    }
+
+    #[test]
+    fn lockstep_bursty_z_score_drops() {
+        let mut f = baseline();
+        f.lockstep_z_score = Some(10.0);
+        let (r, _) = score(&f, &StarsThresholds::v1());
+        assert_eq!(r.sub_scores.get("lockstep_z_score").copied(), Some(30));
+    }
+
+    #[test]
+    fn day_4_formula_uses_methodology_weights() {
+        // H1=100, H2=100, H3=100 → final = 100 (sanity check).
+        let f = baseline();
+        let (r, _) = score(&f, &StarsThresholds::v1());
+        assert_eq!(r.score, 100);
+    }
+
+    #[test]
+    fn combined_evidence_only_fires_when_both_thresholds_met() {
+        // Single signal: only H1 high → no combined evidence.
+        let mut f = baseline();
+        f.low_activity_share = Some(0.30);
+        f.lockstep_z_score = Some(2.0); // below combined_z_threshold = 5
+        let (_, ev) = score(&f, &StarsThresholds::v1());
+        assert!(
+            !ev.iter()
+                .any(|e| e.code == "combined_low_activity_and_lockstep"),
+            "combined evidence should NOT fire when only H1 condition met"
+        );
+    }
+
+    #[test]
+    fn recency_biased_evidence_emitted_on_every_non_below_floor_run() {
+        let f = baseline();
+        let (_, ev) = score(&f, &StarsThresholds::v1());
+        let item = ev
+            .iter()
+            .find(|e| e.code == "recency_biased_sample")
+            .expect("recency_biased_sample evidence required");
+        assert!(matches!(item.verdict, Verdict::Neutral));
     }
 
     #[test]
