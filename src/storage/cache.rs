@@ -203,6 +203,36 @@ impl Cache {
         Ok(n)
     }
 
+    /// Remove all rows from `api_cache`. Returns the number of rows
+    /// deleted.
+    pub fn clear_api_cache(&self) -> Result<usize> {
+        let conn = self.pool.get()?;
+        let n = conn.execute("DELETE FROM api_cache", [])?;
+        Ok(n)
+    }
+
+    /// Remove all rows from every cache table. Returns
+    /// `(api_cache_rows, features_rows, reports_rows)`.
+    pub fn clear_all(&self) -> Result<(usize, usize, usize)> {
+        let conn = self.pool.get()?;
+        let api = conn.execute("DELETE FROM api_cache", [])?;
+        let features = conn.execute("DELETE FROM features", [])?;
+        let reports = conn.execute("DELETE FROM reports", [])?;
+        Ok((api, features, reports))
+    }
+
+    /// Remove `api_cache` rows whose `expires_at` is in the past. Returns
+    /// the number of rows deleted. Used by `cache prune`.
+    pub fn prune_expired(&self) -> Result<usize> {
+        let now = OffsetDateTime::now_utc();
+        let conn = self.pool.get()?;
+        let n = conn.execute(
+            "DELETE FROM api_cache WHERE expires_at IS NOT NULL AND expires_at < ?1",
+            params![format_iso(now)],
+        )?;
+        Ok(n)
+    }
+
     /// Aggregate row counts and on-disk size, surfaced by `cache info`.
     pub fn info(&self) -> Result<CacheInfo> {
         let conn = self.pool.get()?;
@@ -585,6 +615,58 @@ mod tests {
             "cache file should be 0600, got {:o}",
             mode & 0o777
         );
+    }
+
+    #[test]
+    fn clear_api_cache_removes_only_api_rows() {
+        let (cache, _dir) = fresh_cache();
+        cache
+            .put("k1", None, b"{}", Duration::from_secs(60))
+            .unwrap();
+        cache
+            .put("k2", None, b"{}", Duration::from_secs(60))
+            .unwrap();
+        cache.put_feature("r", "activity", "1.0.0", b"{}").unwrap();
+        let n = cache.clear_api_cache().unwrap();
+        assert_eq!(n, 2);
+        assert_eq!(cache.info().unwrap().api_rows, 0);
+        assert_eq!(cache.info().unwrap().feature_rows, 1);
+    }
+
+    #[test]
+    fn clear_all_removes_every_table() {
+        let (cache, _dir) = fresh_cache();
+        cache
+            .put("k", None, b"{}", Duration::from_secs(60))
+            .unwrap();
+        cache.put_feature("r", "activity", "1.0.0", b"{}").unwrap();
+        cache.put_report("r", "standard", "1.0.0", b"{}").unwrap();
+        let (api, features, reports) = cache.clear_all().unwrap();
+        assert_eq!(api, 1);
+        assert_eq!(features, 1);
+        assert_eq!(reports, 1);
+        let info = cache.info().unwrap();
+        assert_eq!(info.api_rows, 0);
+        assert_eq!(info.feature_rows, 0);
+        assert_eq!(info.report_rows, 0);
+    }
+
+    #[test]
+    fn prune_expired_removes_only_stale_rows() {
+        let (cache, _dir) = fresh_cache();
+        // Fresh entry (1h TTL).
+        cache
+            .put("fresh", None, b"{}", Duration::from_secs(3600))
+            .unwrap();
+        // Expired entry (zero TTL).
+        cache
+            .put("stale", None, b"{}", Duration::from_secs(0))
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let n = cache.prune_expired().unwrap();
+        assert_eq!(n, 1);
+        assert!(cache.get("fresh").unwrap().is_some());
+        assert!(cache.get("stale").unwrap().is_none());
     }
 
     #[test]
