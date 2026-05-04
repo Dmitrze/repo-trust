@@ -65,6 +65,16 @@ pub struct CacheInfo {
     pub bytes_on_disk: u64,
 }
 
+/// One row per `(repo, mode, scoring_ver)` returned by
+/// [`Cache::list_all_reports`]. The web viewer's index page renders these.
+#[derive(Debug, Clone)]
+pub struct ReportSummary {
+    pub repo: String,
+    pub mode: String,
+    pub scoring_ver: String,
+    pub computed_at: OffsetDateTime,
+}
+
 impl Cache {
     /// Open or create the cache at `path`. Runs all pending migrations and
     /// (on Unix) tightens the file permissions to 0600.
@@ -193,6 +203,36 @@ impl Cache {
         Ok(n)
     }
 
+    /// Remove all rows from `api_cache`. Returns the number of rows
+    /// deleted.
+    pub fn clear_api_cache(&self) -> Result<usize> {
+        let conn = self.pool.get()?;
+        let n = conn.execute("DELETE FROM api_cache", [])?;
+        Ok(n)
+    }
+
+    /// Remove all rows from every cache table. Returns
+    /// `(api_cache_rows, features_rows, reports_rows)`.
+    pub fn clear_all(&self) -> Result<(usize, usize, usize)> {
+        let conn = self.pool.get()?;
+        let api = conn.execute("DELETE FROM api_cache", [])?;
+        let features = conn.execute("DELETE FROM features", [])?;
+        let reports = conn.execute("DELETE FROM reports", [])?;
+        Ok((api, features, reports))
+    }
+
+    /// Remove `api_cache` rows whose `expires_at` is in the past. Returns
+    /// the number of rows deleted. Used by `cache prune`.
+    pub fn prune_expired(&self) -> Result<usize> {
+        let now = OffsetDateTime::now_utc();
+        let conn = self.pool.get()?;
+        let n = conn.execute(
+            "DELETE FROM api_cache WHERE expires_at IS NOT NULL AND expires_at < ?1",
+            params![format_iso(now)],
+        )?;
+        Ok(n)
+    }
+
     /// Aggregate row counts and on-disk size, surfaced by `cache info`.
     pub fn info(&self) -> Result<CacheInfo> {
         let conn = self.pool.get()?;
@@ -291,6 +331,38 @@ impl Cache {
             )
             .optional()?;
         Ok(row)
+    }
+
+    /// One row per `(repo, mode, scoring_ver)` — the most recent
+    /// `computed_at` for each tuple. Sorted newest-first. Used by the web
+    /// viewer's index page.
+    pub fn list_all_reports(&self) -> Result<Vec<ReportSummary>> {
+        let conn = self.pool.get()?;
+        let mut stmt = conn.prepare(
+            "SELECT repo, mode, scoring_ver, MAX(computed_at) AS latest
+             FROM reports
+             GROUP BY repo, mode, scoring_ver
+             ORDER BY latest DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                let repo: String = r.get(0)?;
+                let mode: String = r.get(1)?;
+                let scoring_ver: String = r.get(2)?;
+                let computed_at: String = r.get(3)?;
+                Ok((repo, mode, scoring_ver, computed_at))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut out = Vec::with_capacity(rows.len());
+        for (repo, mode, scoring_ver, computed_at) in rows {
+            out.push(ReportSummary {
+                repo,
+                mode,
+                scoring_ver,
+                computed_at: parse_iso(&computed_at)?,
+            });
+        }
+        Ok(out)
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────
@@ -480,6 +552,30 @@ mod tests {
     }
 
     #[test]
+    fn list_all_reports_groups_by_tuple_and_orders_newest_first() {
+        let (cache, _dir) = fresh_cache();
+        // Two writes for acme/widget — only the latest computed_at should
+        // surface for that tuple.
+        cache
+            .put_report("acme/widget", "standard", "1.0.0", b"{\"v\":1}")
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        cache
+            .put_report("acme/widget", "standard", "1.0.0", b"{\"v\":2}")
+            .unwrap();
+        // Older write for octocat/Hello-World.
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        cache
+            .put_report("octocat/Hello-World", "standard", "1.0.0", b"{}")
+            .unwrap();
+        let rows = cache.list_all_reports().unwrap();
+        assert_eq!(rows.len(), 2, "tuple-grouped, not row-counted");
+        // Newest first.
+        assert_eq!(rows[0].repo, "octocat/Hello-World");
+        assert_eq!(rows[1].repo, "acme/widget");
+    }
+
+    #[test]
     fn info_counts_rows() {
         let (cache, _dir) = fresh_cache();
         cache
@@ -519,6 +615,58 @@ mod tests {
             "cache file should be 0600, got {:o}",
             mode & 0o777
         );
+    }
+
+    #[test]
+    fn clear_api_cache_removes_only_api_rows() {
+        let (cache, _dir) = fresh_cache();
+        cache
+            .put("k1", None, b"{}", Duration::from_secs(60))
+            .unwrap();
+        cache
+            .put("k2", None, b"{}", Duration::from_secs(60))
+            .unwrap();
+        cache.put_feature("r", "activity", "1.0.0", b"{}").unwrap();
+        let n = cache.clear_api_cache().unwrap();
+        assert_eq!(n, 2);
+        assert_eq!(cache.info().unwrap().api_rows, 0);
+        assert_eq!(cache.info().unwrap().feature_rows, 1);
+    }
+
+    #[test]
+    fn clear_all_removes_every_table() {
+        let (cache, _dir) = fresh_cache();
+        cache
+            .put("k", None, b"{}", Duration::from_secs(60))
+            .unwrap();
+        cache.put_feature("r", "activity", "1.0.0", b"{}").unwrap();
+        cache.put_report("r", "standard", "1.0.0", b"{}").unwrap();
+        let (api, features, reports) = cache.clear_all().unwrap();
+        assert_eq!(api, 1);
+        assert_eq!(features, 1);
+        assert_eq!(reports, 1);
+        let info = cache.info().unwrap();
+        assert_eq!(info.api_rows, 0);
+        assert_eq!(info.feature_rows, 0);
+        assert_eq!(info.report_rows, 0);
+    }
+
+    #[test]
+    fn prune_expired_removes_only_stale_rows() {
+        let (cache, _dir) = fresh_cache();
+        // Fresh entry (1h TTL).
+        cache
+            .put("fresh", None, b"{}", Duration::from_secs(3600))
+            .unwrap();
+        // Expired entry (zero TTL).
+        cache
+            .put("stale", None, b"{}", Duration::from_secs(0))
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let n = cache.prune_expired().unwrap();
+        assert_eq!(n, 1);
+        assert!(cache.get("fresh").unwrap().is_some());
+        assert!(cache.get("stale").unwrap().is_none());
     }
 
     #[test]

@@ -1,0 +1,31 @@
+---
+source: tests/reports_terminal_snapshot.rs
+assertion_line: 158
+expression: rendered
+---
+octocat/Hello-World — https://github.com/octocat/Hello-World
+Score: 12  Category: HighRisk  Confidence: High
+Mode: standard | Scoring: 1.0.0 | Snapshot: 2026-05-04T10:23:45.000000000Z
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Module        Score   Confidence   Top Sub-Score               Missing Data │
+╞═════════════════════════════════════════════════════════════════════════════╡
+│ stars          45     Medium       low_activity_share=85                    │
+│ activity        8     High         commits_last_90d=0          no_releases  │
+│ maintainers    25     Low          bus_factor_proxy=25                      │
+│ adoption       30     Medium       documentation_maturity=60   no_packages  │
+│ security       55     Medium       documentation_presence=80                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Top strengths
+  [+] [security] documentation_presence — 4/5 expected docs present (LICENSE/CONTRIBUTING/CODE_OF_CONDUCT/CODEOWNERS)
+  [+] [stars] watcher_to_star_ratio — watcher/star ratio = 0.0162; ecosystem-adjusted threshold >= 0.0050
+
+Top concerns
+  [-] [activity] no_commits_in_window — The 18-month commit window contained zero commits.
+  [-] [maintainers] solo_maintainer — Only one human author committed in the last year.
+  [-] [adoption] no_readme — README endpoint returned 404.
+
+Caveats
+  - osv_deferred_to_phase_3
+  - recency_biased_sample

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Cached reports — repo-trust{% endblock %}
+
+{% block content %}
+<h2>Cached reports</h2>
+
+{% if allow_scan %}
+<form class="scan-form" method="post" action="/scans">
+    <label>repo
+        <input type="text" name="repo" placeholder="owner/name" required>
+    </label>
+    <label>mode
+        <select name="mode">
+            <option value="quick">quick</option>
+            <option value="standard" selected>standard</option>
+            <option value="deep">deep</option>
+        </select>
+    </label>
+    <button type="submit">Scan</button>
+    <span class="muted">Triggers a fresh scan via the same engine as the CLI.</span>
+</form>
+{% endif %}
+
+{% if rows.is_empty() %}
+<p class="empty">No reports yet. Run <code>repo-trust scan owner/repo</code> first.</p>
+{% else %}
+<table>
+    <thead>
+        <tr>
+            <th>Repository</th>
+            <th>Score</th>
+            <th>Category</th>
+            <th>Mode</th>
+            <th>Scoring</th>
+            <th>Computed</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="/reports/{{ row.repo }}">{{ row.repo }}</a></td>
+            <td class="score">{{ row.score }}</td>
+            <td><span class="cat {{ row.category }}">{{ row.category }}</span></td>
+            <td>{{ row.mode }}</td>
+            <td><code>{{ row.scoring_ver }}</code></td>
+            <td class="muted">{{ row.computed_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

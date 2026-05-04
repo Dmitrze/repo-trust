@@ -133,7 +133,7 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
 
     // ─── Config ────────────────────────────────────────────────────────
     let cfg = config::load::<()>(None).context("loading config")?;
-    let token = args.token.or_else(|| cfg.github.resolve_token());
+    let token = args.token.clone().or_else(|| cfg.github.resolve_token());
     if token.is_none() {
         tracing::warn!("no GitHub token configured; running unauthenticated (60 req/h limit)");
     }
@@ -295,19 +295,9 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
     std::fs::create_dir_all(&args.output)
         .with_context(|| format!("creating output dir {:?}", args.output))?;
     let safe = full_name.replace('/', "_");
-    let json_path = args.output.join(format!("{safe}.json"));
-    json_report::write(&report, &json_path)?;
-    if !args.quiet {
-        println!(
-            "wrote {} (score {} / {}, confidence {:?})",
-            json_path.display(),
-            report.overall_score,
-            mode_label(args.mode),
-            report.overall_confidence,
-        );
-    }
+    let formats = resolve_formats(&args, &cfg.output.default_formats);
 
-    // Cache the report.
+    // Always cache the report regardless of which writers ran.
     let json_bytes = serde_json::to_vec(&report)?;
     ctx.cache.put_report(
         &full_name,
@@ -316,7 +306,79 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
         &json_bytes,
     )?;
 
+    let mut wrote: Vec<std::path::PathBuf> = Vec::new();
+    for fmt in &formats {
+        match fmt {
+            Format::Json => {
+                let p = args.output.join(format!("{safe}.json"));
+                json_report::write(&report, &p)?;
+                wrote.push(p);
+            },
+            Format::Md => {
+                let p = args.output.join(format!("{safe}.md"));
+                crate::reports::markdown_report::write(&report, &p)?;
+                wrote.push(p);
+            },
+            Format::Csv => {
+                let p = args.output.join(format!("{safe}.csv"));
+                crate::reports::csv_report::write(&report, &p)?;
+                wrote.push(p);
+            },
+            Format::Terminal => {
+                // Render to stdout unless --quiet.
+                if !args.quiet {
+                    let stdout = std::io::stdout();
+                    let mut handle = stdout.lock();
+                    crate::reports::terminal::write(&report, &mut handle, !args.no_color)?;
+                }
+            },
+            Format::Sarif => {
+                tracing::warn!("SARIF output deferred to v1.1; skipping");
+            },
+        }
+    }
+
+    if !args.quiet {
+        for p in &wrote {
+            println!("wrote {}", p.display());
+        }
+        println!(
+            "score {} / {}, confidence {:?}",
+            report.overall_score,
+            mode_label(args.mode),
+            report.overall_confidence,
+        );
+    }
+
     Ok(0)
+}
+
+/// Resolve the effective format list. Precedence:
+/// 1. `--json` short-hand → `[Json]`.
+/// 2. Explicit `--format` flags → those values.
+/// 3. `[output] default_formats` config → parsed.
+fn resolve_formats(args: &ScanArgs, default_formats: &[String]) -> Vec<Format> {
+    if args.json {
+        return vec![Format::Json];
+    }
+    if !args.format.is_empty() {
+        return args.format.clone();
+    }
+    let mut out = Vec::new();
+    for s in default_formats {
+        match s.as_str() {
+            "terminal" => out.push(Format::Terminal),
+            "json" => out.push(Format::Json),
+            "md" | "markdown" => out.push(Format::Md),
+            "csv" => out.push(Format::Csv),
+            "sarif" => out.push(Format::Sarif),
+            other => tracing::debug!(format = other, "unknown format in config; skipping"),
+        }
+    }
+    if out.is_empty() {
+        out.push(Format::Json); // Always produce something writable for tests.
+    }
+    out
 }
 
 fn mode_label(m: Mode) -> &'static str {

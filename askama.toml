@@ -1,0 +1,6 @@
+# Askama configuration. We keep web-viewer templates colocated with the
+# code that uses them (`src/web/templates/`) instead of the default
+# `templates/` at the crate root. See `specs/web-viewer.md`.
+
+[general]
+dirs = ["src/web/templates"]
