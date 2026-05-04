@@ -90,7 +90,7 @@ petgraph = { version = "0.6", optional = true }
 
 # Random (deterministic)
 rand = "0.8"
-rand_chacha = "0.3"
+rand_chacha = "0.9"
 
 # Hashing
 blake3 = "1.5"
