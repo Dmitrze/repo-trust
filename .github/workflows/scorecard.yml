@@ -1,12 +1,16 @@
-name: Scorecard supply-chain security
+name: OpenSSF Scorecard
 
-# Disabled on every push during pre-alpha. Run manually via the
-# "Run workflow" button in the Actions tab when we want a Scorecard
-# snapshot — the report makes no sense against a skeleton crate.
-#
-# Re-enable scheduled runs once Phase 1 ships.
+# Self-application of OpenSSF Scorecard. Runs weekly to dogfood the
+# methodology repo-trust federates from. Results upload to GitHub's
+# code-scanning UI and to securityscorecards.dev.
 
 on:
+  branch_protection_rule:
+  schedule:
+    # Wednesday 04:17 UTC — off-peak.
+    - cron: '17 4 * * 3'
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions: read-all
@@ -15,32 +19,28 @@ jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     permissions:
       security-events: write
       id-token: write
       contents: read
       actions: read
+    timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
       - name: Run analysis
         uses: ossf/scorecard-action@v2.4.0
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
-
-      - name: Upload SARIF artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: scorecard-results
           path: results.sarif
           retention-days: 30
-
       - name: Upload SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v3
         with:
