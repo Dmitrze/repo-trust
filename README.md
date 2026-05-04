@@ -235,22 +235,6 @@ It is built and maintained by an independent developer. Sustainability depends o
 
 [![Sponsor on GitHub](https://img.shields.io/github/sponsors/Dmitrze?logo=GitHub-Sponsors&style=for-the-badge&label=Sponsor)](https://github.com/sponsors/Dmitrze)
 
-### For individuals
-
-GitHub Sponsors monthly tiers (tentative — finalized with v0.1.0 launch):
-
-| Tier | Monthly | Benefit |
-| --- | --- | --- |
-| Bronze | $25 | Name in CONTRIBUTORS.md |
-| Silver | $100 | Name + small logo on README sponsors section |
-| Gold | $500 | Logo on README + priority issue triage |
-| Platinum | $2,000 | Logo + dedicated quarterly office-hours call |
-| Enterprise | $10,000+ | All of the above + roadmap input |
-
-### For companies
-
-If your engineering team uses Repo Trust for dependency review, vendor diligence, or supply-chain hygiene, sponsorship buys you direct logo placement, priority triage, and (at higher tiers) roadmap input. [Open a discussion](https://github.com/Dmitrze/repo-trust/discussions) with the `sponsorship` tag, or reach out via the maintainer link below.
-
 ### For funds & grants
 
 Repo Trust is a strong fit for several open-source funding programs:
