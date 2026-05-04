@@ -1,90 +1,91 @@
-<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="15" role="img" aria-label="Terminal output: repo-trust scan rust-lang/cargo">
-  <rect width="1200" height="640" rx="12" fill="#1e1e2e"/>
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="15" role="img" aria-label="Example output: repo-trust scan rust-lang/cargo showing 5-module trust report">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.06"/>
+    </filter>
+  </defs>
 
-  <rect width="1200" height="40" rx="12" fill="#181825"/>
-  <rect y="28" width="1200" height="12" fill="#181825"/>
+  <rect x="4" y="4" width="1192" height="632" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
 
-  <circle cx="24" cy="20" r="7" fill="#f38ba8"/>
-  <circle cx="46" cy="20" r="7" fill="#f9e2af"/>
-  <circle cx="68" cy="20" r="7" fill="#a6e3a1"/>
+  <rect x="4" y="4" width="1192" height="44" rx="12" fill="#f8fafc"/>
+  <rect x="4" y="36" width="1192" height="12" fill="#f8fafc"/>
+  <line x1="4" y1="48" x2="1196" y2="48" stroke="#e2e8f0" stroke-width="1"/>
 
-  <text x="600" y="25" fill="#7f849c" text-anchor="middle" font-size="13">repo-trust — zsh</text>
+  <text x="32" y="30" fill="#0ea5e9" font-weight="700">$</text>
+  <text x="50" y="30" fill="#0f172a">repo-trust scan rust-lang/cargo</text>
 
-  <g transform="translate(32, 78)">
+  <g transform="translate(32, 84)">
 
-    <text fill="#a6e3a1" font-weight="700">❯</text>
-    <text x="22" fill="#cdd6f4">repo-trust scan rust-lang/cargo</text>
+    <text fill="#0f172a" font-weight="700" font-size="18">Repo Trust Report</text>
+    <text x="205" y="0" fill="#cbd5e1">·</text>
+    <text x="225" y="0" fill="#0ea5e9" font-weight="600">rust-lang/cargo</text>
 
-    <text y="40" fill="#cdd6f4" font-weight="700">Repo Trust Report</text>
-    <text x="212" y="40" fill="#7f849c">·</text>
-    <text x="232" y="40" fill="#89b4fa">rust-lang/cargo</text>
+    <text y="36" fill="#475569">Trust Score:</text>
+    <text x="125" y="36" fill="#0f172a" font-weight="700" font-size="17">60 / 100</text>
+    <text x="235" y="36" fill="#cbd5e1">·</text>
+    <text x="255" y="36" fill="#475569">Category:</text>
+    <text x="345" y="36" fill="#d97706" font-weight="600">Mixed</text>
+    <text x="410" y="36" fill="#cbd5e1">·</text>
+    <text x="430" y="36" fill="#475569">Confidence:</text>
+    <text x="540" y="36" fill="#059669" font-weight="600">High</text>
 
-    <text y="70" fill="#cdd6f4">Trust Score:</text>
-    <text x="130" y="70" fill="#f9e2af" font-weight="700">60 / 100</text>
-    <text x="232" y="70" fill="#7f849c">·</text>
-    <text x="252" y="70" fill="#cdd6f4">Category:</text>
-    <text x="343" y="70" fill="#f9e2af" font-weight="600">Mixed</text>
-    <text x="408" y="70" fill="#7f849c">·</text>
-    <text x="428" y="70" fill="#cdd6f4">Confidence:</text>
-    <text x="533" y="70" fill="#a6e3a1" font-weight="600">High</text>
+    <line x1="0" y1="60" x2="1100" y2="60" stroke="#e2e8f0" stroke-width="1"/>
 
-    <line x1="0" y1="92" x2="900" y2="92" stroke="#313244" stroke-width="1"/>
+    <text y="92" fill="#64748b" font-weight="600" font-size="12" letter-spacing="1">MODULE</text>
+    <text x="450" y="92" fill="#64748b" font-weight="600" font-size="12" letter-spacing="1">SCORE</text>
+    <text x="600" y="92" fill="#64748b" font-weight="600" font-size="12" letter-spacing="1">CONFIDENCE</text>
 
-    <text y="118" fill="#7f849c" font-weight="600">Module</text>
-    <text x="360" y="118" fill="#7f849c" font-weight="600">Score</text>
-    <text x="460" y="118" fill="#7f849c" font-weight="600">Confidence</text>
+    <text y="125" fill="#7c3aed" font-weight="600">⭐  Star Authenticity</text>
+    <text x="450" y="125" fill="#059669" font-weight="700" font-size="16">100</text>
+    <text x="600" y="125" fill="#94a3b8">Low</text>
 
-    <text y="148" fill="#cba6f7">⭐  Star Authenticity</text>
-    <text x="360" y="148" fill="#a6e3a1" font-weight="700">100</text>
-    <text x="460" y="148" fill="#7f849c">Low</text>
+    <text y="155" fill="#0d9488" font-weight="600">📈  Activity Health</text>
+    <text x="450" y="155" fill="#d97706" font-weight="700" font-size="16">55</text>
+    <text x="600" y="155" fill="#475569">High</text>
 
-    <text y="175" fill="#94e2d5">📈  Activity Health</text>
-    <text x="360" y="175" fill="#f9e2af" font-weight="700">55</text>
-    <text x="460" y="175" fill="#cdd6f4">High</text>
+    <text y="185" fill="#ca8a04" font-weight="600">👥  Maintainer Health</text>
+    <text x="450" y="185" fill="#d97706" font-weight="700" font-size="16">53</text>
+    <text x="600" y="185" fill="#475569">High</text>
 
-    <text y="202" fill="#f9e2af">👥  Maintainer Health</text>
-    <text x="360" y="202" fill="#f9e2af" font-weight="700">53</text>
-    <text x="460" y="202" fill="#cdd6f4">High</text>
+    <text y="215" fill="#2563eb" font-weight="600">🌍  Adoption Signals</text>
+    <text x="450" y="215" fill="#d97706" font-weight="700" font-size="16">56</text>
+    <text x="600" y="215" fill="#475569">High</text>
 
-    <text y="229" fill="#89b4fa">🌍  Adoption Signals</text>
-    <text x="360" y="229" fill="#f9e2af" font-weight="700">56</text>
-    <text x="460" y="229" fill="#cdd6f4">High</text>
+    <text y="245" fill="#dc2626" font-weight="600">🔒  Security &amp; Readiness</text>
+    <text x="450" y="245" fill="#d97706" font-weight="700" font-size="16">58</text>
+    <text x="600" y="245" fill="#475569">High</text>
 
-    <text y="256" fill="#f38ba8">🔒  Security &amp; Readiness</text>
-    <text x="360" y="256" fill="#f9e2af" font-weight="700">58</text>
-    <text x="460" y="256" fill="#cdd6f4">High</text>
+    <line x1="0" y1="272" x2="1100" y2="272" stroke="#e2e8f0" stroke-width="1"/>
 
-    <line x1="0" y1="282" x2="900" y2="282" stroke="#313244" stroke-width="1"/>
+    <text y="302" fill="#dc2626" font-weight="700">Top concerns:</text>
 
-    <text y="308" fill="#f38ba8" font-weight="700">Top concerns:</text>
-    <text y="335" fill="#cdd6f4">  • commits_last_90d</text>
-    <text x="290" y="335" fill="#7f849c">Activity</text>
-    <text x="460" y="335" fill="#f38ba8" font-weight="600">HighRisk</text>
+    <text y="330" fill="#0f172a">  • commits_last_90d</text>
+    <text x="320" y="330" fill="#94a3b8">Activity</text>
+    <text x="500" y="330" fill="#dc2626" font-weight="600">HighRisk</text>
 
-    <text y="362" fill="#cdd6f4">  • median_issue_response</text>
-    <text x="290" y="362" fill="#7f849c">Activity</text>
-    <text x="460" y="362" fill="#f38ba8" font-weight="600">HighRisk</text>
+    <text y="358" fill="#0f172a">  • median_issue_response</text>
+    <text x="320" y="358" fill="#94a3b8">Activity</text>
+    <text x="500" y="358" fill="#dc2626" font-weight="600">HighRisk</text>
 
-    <text y="389" fill="#cdd6f4">  • contributor_retention</text>
-    <text x="290" y="389" fill="#7f849c">Maintainers</text>
-    <text x="460" y="389" fill="#f38ba8" font-weight="600">HighRisk</text>
+    <text y="386" fill="#0f172a">  • contributor_retention</text>
+    <text x="320" y="386" fill="#94a3b8">Maintainers</text>
+    <text x="500" y="386" fill="#dc2626" font-weight="600">HighRisk</text>
 
-    <text y="428" fill="#a6e3a1" font-weight="700">Top strengths:</text>
-    <text y="455" fill="#cdd6f4">  • days_since_last_commit</text>
-    <text x="290" y="455" fill="#7f849c">Activity</text>
-    <text x="460" y="455" fill="#a6e3a1" font-weight="600">Positive</text>
+    <text y="428" fill="#059669" font-weight="700">Top strengths:</text>
 
-    <text y="482" fill="#cdd6f4">  • commit_concentration</text>
-    <text x="290" y="482" fill="#7f849c">Maintainers</text>
-    <text x="460" y="482" fill="#a6e3a1" font-weight="600">Positive</text>
+    <text y="456" fill="#0f172a">  • days_since_last_commit</text>
+    <text x="320" y="456" fill="#94a3b8">Activity</text>
+    <text x="500" y="456" fill="#059669" font-weight="600">Positive</text>
 
-    <text y="509" fill="#cdd6f4">  • scorecard_score</text>
-    <text x="290" y="509" fill="#7f849c">Security</text>
-    <text x="460" y="509" fill="#a6e3a1" font-weight="600">Positive</text>
+    <text y="484" fill="#0f172a">  • commit_concentration</text>
+    <text x="320" y="484" fill="#94a3b8">Maintainers</text>
+    <text x="500" y="484" fill="#059669" font-weight="600">Positive</text>
 
-    <text y="545" fill="#7f849c" font-style="italic">Report saved to ./repo-trust-reports/rust-lang_cargo.json</text>
+    <text y="512" fill="#0f172a">  • scorecard_score</text>
+    <text x="320" y="512" fill="#94a3b8">Security</text>
+    <text x="500" y="512" fill="#059669" font-weight="600">Positive</text>
 
-    <text y="547" x="0"></text>
+    <text y="548" fill="#94a3b8" font-style="italic" font-size="13">Report saved to ./repo-trust-reports/rust-lang_cargo.json</text>
 
   </g>
 </svg>
