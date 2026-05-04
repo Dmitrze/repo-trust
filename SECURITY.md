@@ -16,7 +16,7 @@ When reporting, please include:
 - Any potential impact you've identified
 - Whether you've already disclosed this elsewhere
 
-We aim to acknowledge reports within **5 business days** and to provide a remediation timeline within **15 business days** of acknowledgment.
+We aim to acknowledge reports within **7 days** and to provide a remediation timeline within **30 days** of acknowledgment.
 
 ## Supported versions
 
@@ -53,6 +53,12 @@ We do **not** accept reports about:
 - Vulnerabilities in third-party APIs we consume (GitHub, deps.dev, OSV) — report those upstream.
 - Issues in repositories we *scan* — those are the scanned project's concern, not ours.
 - Theoretical issues without a working PoC against a current release.
+
+### About scoring outputs
+
+Repo Trust is a trust-scoring tool, not a security audit. The categories it emits — `Trusted`, `Promising`, `Watchlist`, `Unproven`, `HighRisk` — are probabilistic labels derived from named features against named thresholds; they are **not allegations of misconduct, fraud, or compromise** against any project, maintainer, or contributor.
+
+If you believe a label has misrepresented your project, the right venue is the [calibration feedback issue template](.github/ISSUE_TEMPLATE/calibration.yml), not this security policy. We treat scoring miscalibration as a methodology bug, not a security vulnerability — but we take both seriously.
 
 ## Recognition
 

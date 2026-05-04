@@ -10,6 +10,7 @@ Thanks for thinking about contributing — this project lives or dies by communi
 2. **Trust before taste.** This project is about epistemic honesty. If a change makes the tool look better but reduces transparency or determinism, it will be rejected.
 3. **Conservative on negative claims.** Anything that increases the risk of false-positive "fake / suspicious" flags requires unusually strong justification.
 4. **No surprise dependencies.** New runtime crates need a justification in the PR description. We prefer fewer, well-vetted dependencies.
+5. **Apache-2.0, no DCO or CLA.** This project is licensed under [Apache-2.0](LICENSE). By opening a pull request you agree your contribution is licensed under the same terms — that's it. We do not require Developer Certificate of Origin sign-off and we do not ask contributors to sign a Contributor License Agreement.
 
 ---
 
@@ -89,8 +90,10 @@ chore(deps): bump octocrab to 0.39
 ```
 
 ### Code style
-- `cargo fmt` formats. CI fails if `cargo fmt --check` fails.
-- `cargo clippy --all-targets --all-features -- -D warnings` must pass.
+- `cargo fmt --all -- --check` must pass. CI fails otherwise.
+- `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` must pass. Pedantic warnings are surfaced as warnings, not errors — but new code should not introduce any. If you legitimately need to silence one, prefer a scoped `#[allow(...)]` with a one-line comment over editing the crate-level allowlist in `src/lib.rs`.
+- `cargo deny check` must pass. We forbid `openssl` and `native-tls` (we use `rustls`); we ban duplicate license-incompatible crates and prohibit known-vulnerable versions.
+- `cargo audit` must report zero unaddressed advisories. Allowed only via documented exception in `audit.toml` with rationale.
 - Public items need doc comments (`///`) and examples where reasonable.
 - Tests for new behavior — no exceptions for non-trivial logic.
 
@@ -121,7 +124,18 @@ We aim for:
 ### Determinism
 The CLI must produce deterministic output: same inputs + same scoring version + same RNG seed = byte-identical JSON (modulo `snapshot_at` and `runtime_seconds`). Snapshot tests via [`insta`](https://insta.rs/) enforce this. If your change breaks them, either:
 1. The change is wrong.
-2. The change is right and you need to review the snapshots (`cargo insta review`) and explain in the PR.
+2. The change is right and you need to review the snapshots and explain in the PR.
+
+To regenerate snapshots:
+```bash
+# Interactive review (recommended — review each diff before accepting):
+cargo install cargo-insta
+cargo insta review
+
+# Or accept all in one shot (only when you're confident):
+INSTA_UPDATE=always cargo test --all-features
+```
+Either way, commit the updated `*.snap` files alongside the code change.
 
 ---
 
@@ -156,7 +170,9 @@ The five v1 modules are: Stars, Activity, Maintainers, Adoption, Security. Addin
 3. A scoring-version bump (it changes weight semantics).
 4. Implementation against the [`TrustModule` trait](docs/architecture.md#4-module-contract).
 5. ≥ 90% test coverage on the new module.
-6. Documentation in `docs/module-specs.md`.
+6. Documentation in [`docs/module-specs.md`](docs/module-specs.md).
+
+Before writing code, read the existing modules under [`src/scoring/`](src/scoring/) and their per-module specs in [`docs/module-specs.md`](docs/module-specs.md) — the file layout, the collector → features → scorer split, and the `TrustModule` impl shape are deliberate. Mirror them. Each existing module has a corresponding spec at `specs/<module-name>.md` and BDD-style scenarios at `tests/scenarios/<module-name>.md`; both are required for new modules too.
 
 ---
 
