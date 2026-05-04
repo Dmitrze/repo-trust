@@ -86,7 +86,7 @@ askama = { version = "0.12", optional = true }
 rust-embed = { version = "8.5", optional = true }
 
 # Graph analysis (deep mode)
-petgraph = { version = "0.6", optional = true }
+petgraph = { version = "0.8", optional = true }
 
 # Random (deterministic)
 rand = "0.8"
