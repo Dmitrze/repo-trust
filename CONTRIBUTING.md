@@ -93,7 +93,7 @@ chore(deps): bump octocrab to 0.39
 - `cargo fmt --all -- --check` must pass. CI fails otherwise.
 - `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` must pass. Pedantic warnings are surfaced as warnings, not errors — but new code should not introduce any. If you legitimately need to silence one, prefer a scoped `#[allow(...)]` with a one-line comment over editing the crate-level allowlist in `src/lib.rs`.
 - `cargo deny check` must pass. We forbid `openssl` and `native-tls` (we use `rustls`); we ban duplicate license-incompatible crates and prohibit known-vulnerable versions.
-- `cargo audit` must report zero unaddressed advisories. Allowed only via documented exception in `audit.toml` with rationale.
+- `cargo audit` must report zero unaddressed advisories. Allowed only via documented exception in `.cargo/audit.toml` with rationale and a target review date.
 - Public items need doc comments (`///`) and examples where reasonable.
 - Tests for new behavior — no exceptions for non-trivial logic.
 

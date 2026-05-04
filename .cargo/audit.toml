@@ -1,0 +1,16 @@
+# cargo-audit configuration — read by the `cargo audit` CLI and the
+# `rustsec/audit-check` GitHub Action. Mirrors the equivalent ignore in
+# `deny.toml` so both gates apply the same exceptions.
+#
+# Docs: https://rustsec.org/audit-config
+
+[advisories]
+ignore = [
+    # RUSTSEC-2025-0119: `number_prefix 0.4.0` is unmaintained.
+    # Pulled in transitively by `indicatif` (progress bars). The
+    # advisory is "unmaintained-only" — no exploitability claim, and
+    # no safe upgrade is published. Track upstream `indicatif` for
+    # migration to `unit-prefix`; review by 2026-11-01.
+    "RUSTSEC-2025-0119",
+]
+informational_warnings = ["unmaintained"]
