@@ -1,6 +1,6 @@
-# Day 5 polish — deferred items from Day 2 architect review
+# Day 5 polish — deferred items from Day 2 + Day 3 architect review
 
-> **Status**: All Day 2 PRs (#22–#27) approved and merged. The items below were flagged as **non-blocking** during architect review and must be picked up during the Day 5 PM `chore/ci-strict-gates` work, before the public release.
+> **Status**: All Day 2 PRs (#22–#27) and Day 3 PRs (#28–#32) approved and merged. The items below were flagged as **non-blocking** during architect review and must be picked up during the Day 5 PM `chore/ci-strict-gates` work, before the public release.
 >
 > **DRI**: @Dmitrze + the Day 5 PM Claude Code session.
 >
@@ -12,7 +12,7 @@
 
 ### 1. `as u64` / `as u8` casts will fail `clippy::pedantic::cast_possible_truncation`
 
-When `RUSTFLAGS="-D warnings"` + `#![warn(clippy::pedantic)]` are re-enabled, these will fail CI. Fix in a single sweep across the four modules + cli:
+When `RUSTFLAGS="-D warnings"` + `#![warn(clippy::pedantic)]` are re-enabled, these will fail CI. Fix in a single sweep across all five modules + cli:
 
 **`src/features/maintainers.rs`:**
 - `let active_maintainers_last_year = by_author.len() as u64;`
@@ -37,6 +37,16 @@ When `RUSTFLAGS="-D warnings"` + `#![warn(clippy::pedantic)]` are re-enabled, th
 - `(weighted_sum / total_weight).round().clamp(0.0, 100.0) as u8`
 
 **Activity module** (Day 1 carry-over) has the same pattern in `src/scoring/activity.rs` and `src/features/activity.rs`.
+
+**`src/features/stars.rs` (Day 3):**
+- `(now - raw.repo_metadata.created_at).whole_days().max(0) as u64`
+- `forks as f64 / total as f64` (cast OK — not truncating, but pedantic may want `f64::from(forks)`)
+- `Some(matches as f64 / raw.sampled_profiles.len() as f64)`
+
+**`src/scoring/stars.rs` (Day 3):**
+- `((u32::from(fork_score) + u32::from(watcher_score)) / 2) as u8` (clamped, mathematically safe)
+- `(frac * 100.0).round().clamp(0.0, 100.0) as u8` (clamped, safe)
+- `raw.round().clamp(0.0, 100.0) as u8` (clamped, safe)
 
 **Fix pattern**: prefer `u64::try_from(value).unwrap_or(0)` for runtime-bounded values; use scoped `#[allow(clippy::cast_possible_truncation)]` with a one-line rationale comment when the bound is mathematically guaranteed (e.g. score after `.clamp(0.0, 100.0)` cannot overflow `u8`). Do **not** add a crate-level `allow` — keep it local so future code doesn't get a free pass.
 
@@ -73,27 +83,71 @@ Pick A unless real-repo benchmark in (5) below suggests B reads more naturally.
 
 - [ ] Reconciled
 
+### 2b. Hangover STUB comment in `src/models/repository.rs` (Day 3)
+
+After PR #29 + #30 + #32 merged, the `deps_dev` field on `RepositoryContext` is no longer a stub — it's a real `DepsDevClient`. The doc comment still says:
+
+```rust
+/// STUB: scan-pipeline-day3 wires this real. Carries the deps.dev
+/// federated client that the Adoption Signals module consumes.
+pub deps_dev: DepsDevClient,
+```
+
+Fix: remove the `STUB:` lead-in. Update to: *"Carries the deps.dev federated client that the Adoption Signals module consumes (per ADR-0012)."*
+
+- [ ] Reconciled
+
 ---
 
 ## Test coverage gaps
 
-Wiremock integration tests deferred from Day 2; currently covered only by unit tests or not at all.
+Wiremock integration tests deferred; currently covered only by unit tests or not at all.
 
-### 3. Maintainer Health module
+### 3. Maintainer Health module (Day 2)
 - [ ] **S-001** multi-maintainer healthy fixture (5 active contributors, Gini ≈ 0.3, CODEOWNERS present) → assert `score ≥ 80`, `confidence == High`
 - [ ] **S-103** archived demotes to Low + caveat — currently only unit-tested
 - [ ] **S-201** contributors endpoint 500 partway through → confidence drops one band, `missing_data["contributors"]`
 
-### 4. Security & Readiness module
+### 4. Security & Readiness module (Day 2)
 - [ ] **S-101** stale Scorecard (30-90 days old) lowers weight to 3.0, `confidence == Medium`
 - [ ] **S-102** CODEOWNERS at non-default path detected (`/CODEOWNERS` works when `.github/CODEOWNERS` is 404)
 - [ ] **S-201** Scorecard 5xx → real error, CLI exit code 7 (distinct from the 404 fallback path)
+
+### 5. Adoption Signals module (Day 3)
+- [ ] **Real S-001** popular-package wiremock fixture (deps.dev returns 1 GO package with `weeklyDownloads: "100000"`, README + docs/ + examples/ all present) → assert `score ≥ 75`, `confidence == High`. The current `s001_well_documented_repo_runs_end_to_end` test uses an empty deps.dev response and effectively covers the no-packages branch end-to-end. Real S-001 still missing.
+- [ ] **S-002** minimal-but-documented (deps.dev 1k downloads + docs/ but no examples/) → assert `score ∈ [40, 70]`
+- [ ] **S-102** explicit deps.dev outage scenario (5xx from deps.dev) → confidence Low, `missing_data["deps_dev_unavailable"]`
+- [ ] **S-103** archived repo (currently unit-only) → integration test
+- [ ] **S-201 (standalone)** README 404 standalone (with packages present) → Concerning `no_readme` evidence + downloads sub-score still computed
+
+### 6. Star Authenticity module (Day 3)
+
+The `tests/all_five_modules_integration.rs` end-to-end test (PR #32) covers Stars module wiring through the binary CLI. However, the fixture provides only **2 stargazers**, which is below `min_sample_for_medium_confidence (30)` — so Stars confidence is always Low in that test. This validates structure, not score magnitude.
+
+- [ ] **S-001** organic-profile fixture with ≥100 stargazers (mostly healthy profiles) → assert `score ≥ 80`, `confidence == High`
+- [ ] **S-002** suspicious-profile fixture with ≥100 stargazers (38%+ matching low-activity composite) → assert `score ≤ 30`, verdict `Concerning` (NOT `HighRisk`)
+- [ ] **S-101** tiny repo (<50 stars) → score 0, confidence Low, `missing_data["below_sampling_floor"]`
+- [ ] **S-102** new repo (<6 months) leniency applied → 5pp shift visible in evidence rationale
+- [ ] **S-401** determinism (same seed → byte-identical scores) — already enforced by `tests/aggregate_determinism.rs` for the broader scan; add Stars-specific seed-stability assertion if benchmarks show drift
+- [ ] **S-501** language posture — already covered in unit test `rationale_uses_only_probabilistic_phrasing_no_fake_fraud_bot`; spot-check still required against real-repo output Day 5
+
+### 7. Stars: `recency_biased_sample` Neutral evidence (Day 3 → Day 4)
+
+Per the Day 3 EOD Q1 → architect option (a) decision:
+
+> Day 3 Stars collector fetches the sample_size most-recent stargazers and treats them as the sample (no sub-sampling from a larger pool). The methodology says "Uniform random over GitHub's stargazer pagination". This is a recency bias.
+
+**CC promised both** (a) a 1-paragraph caveat in `specs/star-authenticity-module-shallow.md` §9 and (b) a `recency_biased_sample` Neutral evidence item the module emits — **neither shipped Day 3**. This rides Day 4 alongside the lockstep work (`feat/module-stars-lockstep`):
+
+- [ ] Add `recency_biased_sample` Neutral evidence item to `src/scoring/stars.rs` rationale: *"Day 3-4 sampling is recency-biased: the most-recent N stargazers are sampled directly. True uniform random sampling over the full stargazer history is deferred to Phase 2 deep mode."*
+- [ ] Update `specs/star-authenticity-module-shallow.md` §9 with the same caveat paragraph
+- [ ] Unit test asserting the evidence item is emitted on every non-below-floor run
 
 ---
 
 ## Calibration (validate against real-repo benchmark)
 
-### 5. Security federation policy weight semantics
+### 8. Security federation policy weight semantics
 
 `docs/methodology.md` §Module 5 says "Scorecard ≤30 days old: weight 0.40, confidence contribution High." The shipped implementation in `src/scoring/security.rs`:
 
@@ -114,15 +168,27 @@ This gives Scorecard fresh ≈ 50% share of final (4.0 / 8.0), stale ≈ 43% (3.
 
 - [ ] Decision made + applied (recalibrate or doc-clarify)
 
+### 9. Adoption download bands logarithmic vs linear
+
+`src/scoring/adoption.rs` uses logarithmic banding (1k → 25, 10k → 50, 100k → 75, 1M → 100). `specs/adoption-signals-module.md` §9 marks this as v1 with "tune in v1.1 if benchmark says".
+
+**Day 5 action**: during the same benchmark sweep, look for mid-popularity packages (10k–100k downloads) that score 50 but feel intuitively like 60–70. If pattern reproduces, narrow the 50/75 band breakpoints. Decision goes in `methodology.md` Module 4 change log.
+
+- [ ] Benchmark verdict captured
+
 ---
 
 ## Out of scope — track for v1.1, not Day 5
 
-These are **not** Day 5 work — flagged here only to prevent accidental scope-creep into Day 5:
+These are **not** Day 5 work — flagged here only to prevent accidental scope-creep:
 
 - Maintainer Health: PR-review concentration via per-PR `/pulls/{N}/reviews` endpoint (currently uses `merged_by` + comment counts as proxy)
 - Maintainer Health: maintainer responsiveness sub-score (separate spec)
 - Security: branch-protection signals (requires admin token scope)
+- Adoption: GitHub `/dependents` HTML scrape — brittle, opt-in flag in v1.1 if user demand surfaces
+- Adoption: Docker Hub pulls — Phase 2
+- Stars: full uniform random sub-sampling from a larger pool (Phase 2 deep mode)
+- Stars: deep-mode graph signal (co-starring overlap with known campaign clusters) — Phase 2+
 
 Stars Heuristic 2 (lockstep timing z-score) is **Day 4** work, not v1.1.
 
@@ -130,8 +196,8 @@ Stars Heuristic 2 (lockstep timing z-score) is **Day 4** work, not v1.1.
 
 ## Acceptance for closing this doc
 
-When all six checkboxes above are ticked **and** `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` is clean **and** the benchmark sweep is committed, this file is deleted as part of the pre-public-release cleanup PR.
+When all checkboxes above are ticked **and** `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` is clean **and** the benchmark sweep is committed, this file is deleted as part of the pre-public-release cleanup PR.
 
 ---
 
-*Created 2026-05-04 during Day 2 architect review. See AI_NATIVE_CONSTITUTION.md §Closed loop for the rationale on tracking deferred work as queryable artefacts rather than verbal hand-offs.*
+*Created 2026-05-04 during Day 2 architect review. Updated 2026-05-05 with Day 3 items. See AI_NATIVE_CONSTITUTION.md §Closed loop for the rationale on tracking deferred work as queryable artefacts rather than verbal hand-offs.*
