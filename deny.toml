@@ -21,7 +21,14 @@ feature-depth = 1
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
-ignore = []
+ignore = [
+    # `number_prefix` is pulled in transitively by `indicatif` (progress
+    # bars). RUSTSEC-2025-0119 marks it as unmaintained — there is no
+    # exploitability claim, only a maintenance flag, and no safe upgrade
+    # is available. Track upstream `indicatif` for migration to the
+    # recommended `unit-prefix` replacement; review by 2026-11-01.
+    { id = "RUSTSEC-2025-0119", reason = "transitive via indicatif; unmaintained-only, no fix available; review 2026-11-01" },
+]
 
 # ─── License policy ───────────────────────────────────────────────────
 [licenses]
@@ -39,6 +46,11 @@ allow = [
     "CC0-1.0",
     "MPL-2.0",
     "OpenSSL",
+    # CDLA-Permissive-2.0 is a Linux Foundation permissive data license
+    # — used by `webpki-roots` (Mozilla CA bundle redistributed for
+    # rustls). Compatible with our Apache-2.0 distribution; we are not
+    # modifying the bundle.
+    "CDLA-Permissive-2.0",
 ]
 exceptions = []
 
