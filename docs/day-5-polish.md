@@ -1,6 +1,6 @@
-# Day 5 polish — deferred items from Day 2 + Day 3 architect review
+# Day 5 polish — deferred items from Day 2 + Day 3 + Day 4 architect review
 
-> **Status**: All Day 2 PRs (#22–#27) and Day 3 PRs (#28–#32) approved and merged. The items below were flagged as **non-blocking** during architect review and must be picked up during the Day 5 PM `chore/ci-strict-gates` work, before the public release.
+> **Status**: All Day 2 PRs (#22–#27), Day 3 PRs (#28–#32), and Day 4 PRs (#33–#40) approved and merged. The items below were flagged as **non-blocking** during architect review and must be picked up during the Day 5 PM `chore/ci-strict-gates` work, before the public release.
 >
 > **DRI**: @Dmitrze + the Day 5 PM Claude Code session.
 >
@@ -38,20 +38,27 @@ When `RUSTFLAGS="-D warnings"` + `#![warn(clippy::pedantic)]` are re-enabled, th
 
 **Activity module** (Day 1 carry-over) has the same pattern in `src/scoring/activity.rs` and `src/features/activity.rs`.
 
-**`src/features/stars.rs` (Day 3):**
+**`src/features/stars.rs` (Day 3 + Day 4):**
 - `(now - raw.repo_metadata.created_at).whole_days().max(0) as u64`
 - `forks as f64 / total as f64` (cast OK — not truncating, but pedantic may want `f64::from(forks)`)
 - `Some(matches as f64 / raw.sampled_profiles.len() as f64)`
+- **Day 4 lockstep**: `Vec::with_capacity(span_days.unsigned_abs() as usize + 1)` — span_days is i64, abs as usize. Pedantic OK but may warn on platforms with 32-bit usize.
 
-**`src/scoring/stars.rs` (Day 3):**
+**`src/scoring/stars.rs` (Day 3 + Day 4):**
 - `((u32::from(fork_score) + u32::from(watcher_score)) / 2) as u8` (clamped, mathematically safe)
 - `(frac * 100.0).round().clamp(0.0, 100.0) as u8` (clamped, safe)
-- `raw.round().clamp(0.0, 100.0) as u8` (clamped, safe)
+- `raw.round().clamp(0.0, 100.0) as u8` (clamped, safe — used 3× now: H1+H3, H1+H2+H3, and H2+H3 fallback formulas)
 
 **Fix pattern**: prefer `u64::try_from(value).unwrap_or(0)` for runtime-bounded values; use scoped `#[allow(clippy::cast_possible_truncation)]` with a one-line rationale comment when the bound is mathematically guaranteed (e.g. score after `.clamp(0.0, 100.0)` cannot overflow `u8`). Do **not** add a crate-level `allow` — keep it local so future code doesn't get a free pass.
 
 - [ ] All casts replaced with `try_from` or scoped allow
 - [ ] `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` passes clean
+
+### 1b. CI matrix: add `cargo build --no-default-features` (Day 4 Q1)
+
+Per Day 4 EOD Q1 — owner accepted the default option (yes, add Day 5 PM). The web-viewer feature (`src/cli/serve.rs`, `src/web/`) is opt-in via `[features] web`; if a user disables default features they should still get a working `repo-trust scan` binary. The Day 4 agent already verified `cargo build --no-default-features` succeeds locally; Day 5 PM should make this an explicit CI matrix entry.
+
+- [ ] Extend CI matrix from `[ubuntu-latest, macos-latest] × [default-features]` to also include `[--no-default-features]`. Adds ~3× runner minutes for high signal-to-noise (catches feature-gating regressions).
 
 ---
 
@@ -79,7 +86,7 @@ The behavior is **acceptable** (no releases → no full credit for "established 
 - **Option A** (preferred — keep current behavior): update the docstring to *"Returns false for repos with zero releases — no track record of semver discipline yet."*
 - **Option B** (vacuously-true semantics): change the trailing `any` to `true`.
 
-Pick A unless real-repo benchmark in (5) below suggests B reads more naturally.
+Pick A unless real-repo benchmark in (8) below suggests B reads more naturally.
 
 - [ ] Reconciled
 
@@ -94,6 +101,27 @@ pub deps_dev: DepsDevClient,
 ```
 
 Fix: remove the `STUB:` lead-in. Update to: *"Carries the deps.dev federated client that the Adoption Signals module consumes (per ADR-0012)."*
+
+- [ ] Reconciled
+
+### 2c. Markdown snapshot fixture timestamp comment lies (Day 4)
+
+In `tests/reports_markdown_snapshot.rs::pinned_snapshot_at()`:
+
+```rust
+fn pinned_snapshot_at() -> OffsetDateTime {
+    // 2026-05-04T10:23:45Z — same value as the spec example.
+    OffsetDateTime::from_unix_timestamp(1_777_796_625).unwrap()
+}
+```
+
+The unix timestamp `1_777_796_625` is actually **2026-05-03T08:23:45Z**, not the comment's 2026-05-04T10:23:45Z. The committed snapshot file (`tests/snapshots/reports_markdown_snapshot__inactive_baseline_5_modules.snap`) is consistent with the actual timestamp — only the comment lies. Fix: either update the comment to match the actual unix timestamp, or update the timestamp + regenerate the snapshot to match the commented date.
+
+- [ ] Reconciled
+
+### 2d. `let _ = writeln!(...)` discard pattern (Day 4)
+
+`src/reports/markdown_report.rs` uses `let _ = writeln!(out, ...)` ~50 times. Writing to a `&mut String` cannot fail (capacity grows), so this is idiomatic; but `clippy::pedantic::let_underscore_must_use` may warn under strict gates. Consider scoping `#[allow(clippy::let_underscore_must_use)]` to the module top, or replace with a small `wln!` macro that handles the discard internally.
 
 - [ ] Reconciled
 
@@ -120,34 +148,43 @@ Wiremock integration tests deferred; currently covered only by unit tests or not
 - [ ] **S-103** archived repo (currently unit-only) → integration test
 - [ ] **S-201 (standalone)** README 404 standalone (with packages present) → Concerning `no_readme` evidence + downloads sub-score still computed
 
-### 6. Star Authenticity module (Day 3)
+### 6. Star Authenticity module (Day 3 + Day 4)
 
-The `tests/all_five_modules_integration.rs` end-to-end test (PR #32) covers Stars module wiring through the binary CLI. However, the fixture provides only **2 stargazers**, which is below `min_sample_for_medium_confidence (30)` — so Stars confidence is always Low in that test. This validates structure, not score magnitude.
+The `tests/all_five_modules_integration.rs` end-to-end test (PR #32) covers Stars module wiring through the binary CLI. However, the fixture provides only **2 stargazers** with the **same date**, which is below `min_sample_for_medium_confidence (30)` AND below the 35-day window required for lockstep z-score — so Stars confidence is always Low and `lockstep_z_score = None` in that test. This validates structure, not score magnitude or H2 path.
 
 - [ ] **S-001** organic-profile fixture with ≥100 stargazers (mostly healthy profiles) → assert `score ≥ 80`, `confidence == High`
 - [ ] **S-002** suspicious-profile fixture with ≥100 stargazers (38%+ matching low-activity composite) → assert `score ≤ 30`, verdict `Concerning` (NOT `HighRisk`)
 - [ ] **S-101** tiny repo (<50 stars) → score 0, confidence Low, `missing_data["below_sampling_floor"]`
 - [ ] **S-102** new repo (<6 months) leniency applied → 5pp shift visible in evidence rationale
+- [ ] **Lockstep H2** wiremock fixture: starred_at series spanning ≥35 days with both smooth (z<3) and bursty (z≥5) variants → asserts `lockstep_z_score` sub-score appears, formula uses 0.55/0.30/0.15 weights, `combined_low_activity_and_lockstep` evidence emitted when both thresholds met
 - [ ] **S-401** determinism (same seed → byte-identical scores) — already enforced by `tests/aggregate_determinism.rs` for the broader scan; add Stars-specific seed-stability assertion if benchmarks show drift
 - [ ] **S-501** language posture — already covered in unit test `rationale_uses_only_probabilistic_phrasing_no_fake_fraud_bot`; spot-check still required against real-repo output Day 5
 
-### 7. Stars: `recency_biased_sample` Neutral evidence (Day 3 → Day 4)
+### 7. Stars: `recency_biased_sample` Neutral evidence — ✅ **DONE in PR #34 (Day 4)**
 
-Per the Day 3 EOD Q1 → architect option (a) decision:
+Per the Day 3 EOD Q1 → architect option (a) decision, both items shipped:
 
-> Day 3 Stars collector fetches the sample_size most-recent stargazers and treats them as the sample (no sub-sampling from a larger pool). The methodology says "Uniform random over GitHub's stargazer pagination". This is a recency bias.
+- [x] `recency_biased_sample` Neutral evidence emitted on every non-below-floor run in `src/scoring/stars.rs` (with unit test `recency_biased_evidence_emitted_on_every_non_below_floor_run`)
+- [x] `specs/star-authenticity-module-shallow.md` §9 amended with the 19-line caveat paragraph (PR #34)
 
-**CC promised both** (a) a 1-paragraph caveat in `specs/star-authenticity-module-shallow.md` §9 and (b) a `recency_biased_sample` Neutral evidence item the module emits — **neither shipped Day 3**. This rides Day 4 alongside the lockstep work (`feat/module-stars-lockstep`):
+### 8. Web viewer wiremock integration (Day 4)
 
-- [ ] Add `recency_biased_sample` Neutral evidence item to `src/scoring/stars.rs` rationale: *"Day 3-4 sampling is recency-biased: the most-recent N stargazers are sampled directly. True uniform random sampling over the full stargazer history is deferred to Phase 2 deep mode."*
-- [ ] Update `specs/star-authenticity-module-shallow.md` §9 with the same caveat paragraph
-- [ ] Unit test asserting the evidence item is emitted on every non-below-floor run
+`tests/web_viewer_integration.rs` covers the happy path (S-001/S-002/S-103) and the in-handler tests cover S-101 (empty cache) + S-102 (404) + S-502 (POST /scans → 405 без --allow-scan). Missing:
+
+- [ ] **S-501** explicit test that `is_localhost_bind` warning fires on `0.0.0.0:8765` start (smoke test of the warn path)
+- [ ] **POST /scans happy path** when `--allow-scan` is on — deferred because spec §3 marks the synchronous-blocking behavior as v1 (Day 4 Q3 default a). Day 5 only if the benchmark sweep surfaces issues.
+
+### 9. CSV writer `\r` carriage return scenario (Day 4)
+
+`escape_csv_handles_carriage_return` covers the unit case; missing an integration scenario where `\r` appears in a real evidence value. Low-priority because no current evidence emitter produces `\r` — purely defensive.
+
+- [ ] Optional: add a contrived scenario or document that `\r` handling is unit-tested only.
 
 ---
 
 ## Calibration (validate against real-repo benchmark)
 
-### 8. Security federation policy weight semantics
+### 10. Security federation policy weight semantics
 
 `docs/methodology.md` §Module 5 says "Scorecard ≤30 days old: weight 0.40, confidence contribution High." The shipped implementation in `src/scoring/security.rs`:
 
@@ -168,13 +205,21 @@ This gives Scorecard fresh ≈ 50% share of final (4.0 / 8.0), stale ≈ 43% (3.
 
 - [ ] Decision made + applied (recalibrate or doc-clarify)
 
-### 9. Adoption download bands logarithmic vs linear
+### 11. Adoption download bands logarithmic vs linear
 
 `src/scoring/adoption.rs` uses logarithmic banding (1k → 25, 10k → 50, 100k → 75, 1M → 100). `specs/adoption-signals-module.md` §9 marks this as v1 with "tune in v1.1 if benchmark says".
 
 **Day 5 action**: during the same benchmark sweep, look for mid-popularity packages (10k–100k downloads) that score 50 but feel intuitively like 60–70. If pattern reproduces, narrow the 50/75 band breakpoints. Decision goes in `methodology.md` Module 4 change log.
 
 - [ ] Benchmark verdict captured
+
+### 12. Stars lockstep z-score band calibration (Day 4)
+
+`src/scoring/thresholds.rs::StarsThresholds::v1()::lockstep_score_bands` uses `[(3.0, 100), (5.0, 85), (8.0, 60), (12.0, 30), (∞, 10)]` per methodology v1. The bursty-pattern threshold (z ≥ 5 → 60) was set conservatively; the >12 band drops to 10 (almost zero). Real-world bursty-but-legitimate cases (HN front page, "Show HN", podcast mentions) can hit z ~10 naturally without being suspicious.
+
+**Day 5 action**: during the benchmark sweep, identify any HN-bursty repos mis-classified by H2; if pattern is significant, soften the >12 band from 10 → 0 (or widen the 8-12 band) and document in methodology.md change log. The combined H1+H2 condition (both ≥ 20% AND z ≥ 5) is the more reliable signal than H2 alone.
+
+- [ ] Benchmark verdict captured (calibrate or document)
 
 ---
 
@@ -189,15 +234,16 @@ These are **not** Day 5 work — flagged here only to prevent accidental scope-c
 - Adoption: Docker Hub pulls — Phase 2
 - Stars: full uniform random sub-sampling from a larger pool (Phase 2 deep mode)
 - Stars: deep-mode graph signal (co-starring overlap with known campaign clusters) — Phase 2+
-
-Stars Heuristic 2 (lockstep timing z-score) is **Day 4** work, not v1.1.
+- **Web viewer: async POST /scans** with job queue + `GET /scans/{id}` polling endpoint (Day 4 Q3 deferred per default option a). Synchronous behavior is fine for v1 "developer-laptop only" use case (architecture.md §12). Add only if user demand surfaces.
+- **Web viewer: SARIF output format** — Day 4 PR #40 wires the `Format::Sarif` enum variant с `tracing::warn!("SARIF output deferred to v1.1; skipping")`. Implement когда user demand surfaces.
+- **Web viewer: live re-scan progress via WebSockets** — Day 5+ if value is clear.
 
 ---
 
 ## Acceptance for closing this doc
 
-When all checkboxes above are ticked **and** `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` is clean **and** the benchmark sweep is committed, this file is deleted as part of the pre-public-release cleanup PR.
+When all checkboxes above are ticked **and** `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` is clean **and** `cargo build --no-default-features` succeeds in CI matrix **and** the benchmark sweep is committed, this file is deleted as part of the pre-public-release cleanup PR.
 
 ---
 
-*Created 2026-05-04 during Day 2 architect review. Updated 2026-05-05 with Day 3 items. See AI_NATIVE_CONSTITUTION.md §Closed loop for the rationale on tracking deferred work as queryable artefacts rather than verbal hand-offs.*
+*Created 2026-05-04 during Day 2 architect review. Updated 2026-05-05 with Day 3 items. Updated 2026-05-06 with Day 4 items + section 7 marked DONE. See AI_NATIVE_CONSTITUTION.md §Closed loop for the rationale on tracking deferred work as queryable artefacts rather than verbal hand-offs.*
