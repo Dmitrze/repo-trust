@@ -312,6 +312,7 @@ pub async fn scan(State(state): State<AppState>, headers: HeaderMap, body: Strin
         no_color: true,
         json: false,
         api_base_url: None,
+        snapshot_at: None,
     };
 
     match crate::cli::scan::execute(args).await {
