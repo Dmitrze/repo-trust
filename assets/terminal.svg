@@ -1,0 +1,90 @@
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="15" role="img" aria-label="Terminal output: repo-trust scan rust-lang/cargo">
+  <rect width="1200" height="640" rx="12" fill="#1e1e2e"/>
+
+  <rect width="1200" height="40" rx="12" fill="#181825"/>
+  <rect y="28" width="1200" height="12" fill="#181825"/>
+
+  <circle cx="24" cy="20" r="7" fill="#f38ba8"/>
+  <circle cx="46" cy="20" r="7" fill="#f9e2af"/>
+  <circle cx="68" cy="20" r="7" fill="#a6e3a1"/>
+
+  <text x="600" y="25" fill="#7f849c" text-anchor="middle" font-size="13">repo-trust — zsh</text>
+
+  <g transform="translate(32, 78)">
+
+    <text fill="#a6e3a1" font-weight="700">❯</text>
+    <text x="22" fill="#cdd6f4">repo-trust scan rust-lang/cargo</text>
+
+    <text y="40" fill="#cdd6f4" font-weight="700">Repo Trust Report</text>
+    <text x="212" y="40" fill="#7f849c">·</text>
+    <text x="232" y="40" fill="#89b4fa">rust-lang/cargo</text>
+
+    <text y="70" fill="#cdd6f4">Trust Score:</text>
+    <text x="130" y="70" fill="#f9e2af" font-weight="700">60 / 100</text>
+    <text x="232" y="70" fill="#7f849c">·</text>
+    <text x="252" y="70" fill="#cdd6f4">Category:</text>
+    <text x="343" y="70" fill="#f9e2af" font-weight="600">Mixed</text>
+    <text x="408" y="70" fill="#7f849c">·</text>
+    <text x="428" y="70" fill="#cdd6f4">Confidence:</text>
+    <text x="533" y="70" fill="#a6e3a1" font-weight="600">High</text>
+
+    <line x1="0" y1="92" x2="900" y2="92" stroke="#313244" stroke-width="1"/>
+
+    <text y="118" fill="#7f849c" font-weight="600">Module</text>
+    <text x="360" y="118" fill="#7f849c" font-weight="600">Score</text>
+    <text x="460" y="118" fill="#7f849c" font-weight="600">Confidence</text>
+
+    <text y="148" fill="#cba6f7">⭐  Star Authenticity</text>
+    <text x="360" y="148" fill="#a6e3a1" font-weight="700">100</text>
+    <text x="460" y="148" fill="#7f849c">Low</text>
+
+    <text y="175" fill="#94e2d5">📈  Activity Health</text>
+    <text x="360" y="175" fill="#f9e2af" font-weight="700">55</text>
+    <text x="460" y="175" fill="#cdd6f4">High</text>
+
+    <text y="202" fill="#f9e2af">👥  Maintainer Health</text>
+    <text x="360" y="202" fill="#f9e2af" font-weight="700">53</text>
+    <text x="460" y="202" fill="#cdd6f4">High</text>
+
+    <text y="229" fill="#89b4fa">🌍  Adoption Signals</text>
+    <text x="360" y="229" fill="#f9e2af" font-weight="700">56</text>
+    <text x="460" y="229" fill="#cdd6f4">High</text>
+
+    <text y="256" fill="#f38ba8">🔒  Security &amp; Readiness</text>
+    <text x="360" y="256" fill="#f9e2af" font-weight="700">58</text>
+    <text x="460" y="256" fill="#cdd6f4">High</text>
+
+    <line x1="0" y1="282" x2="900" y2="282" stroke="#313244" stroke-width="1"/>
+
+    <text y="308" fill="#f38ba8" font-weight="700">Top concerns:</text>
+    <text y="335" fill="#cdd6f4">  • commits_last_90d</text>
+    <text x="290" y="335" fill="#7f849c">Activity</text>
+    <text x="460" y="335" fill="#f38ba8" font-weight="600">HighRisk</text>
+
+    <text y="362" fill="#cdd6f4">  • median_issue_response</text>
+    <text x="290" y="362" fill="#7f849c">Activity</text>
+    <text x="460" y="362" fill="#f38ba8" font-weight="600">HighRisk</text>
+
+    <text y="389" fill="#cdd6f4">  • contributor_retention</text>
+    <text x="290" y="389" fill="#7f849c">Maintainers</text>
+    <text x="460" y="389" fill="#f38ba8" font-weight="600">HighRisk</text>
+
+    <text y="428" fill="#a6e3a1" font-weight="700">Top strengths:</text>
+    <text y="455" fill="#cdd6f4">  • days_since_last_commit</text>
+    <text x="290" y="455" fill="#7f849c">Activity</text>
+    <text x="460" y="455" fill="#a6e3a1" font-weight="600">Positive</text>
+
+    <text y="482" fill="#cdd6f4">  • commit_concentration</text>
+    <text x="290" y="482" fill="#7f849c">Maintainers</text>
+    <text x="460" y="482" fill="#a6e3a1" font-weight="600">Positive</text>
+
+    <text y="509" fill="#cdd6f4">  • scorecard_score</text>
+    <text x="290" y="509" fill="#7f849c">Security</text>
+    <text x="460" y="509" fill="#a6e3a1" font-weight="600">Positive</text>
+
+    <text y="545" fill="#7f849c" font-style="italic">Report saved to ./repo-trust-reports/rust-lang_cargo.json</text>
+
+    <text y="547" x="0"></text>
+
+  </g>
+</svg>

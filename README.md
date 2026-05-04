@@ -1,10 +1,6 @@
 <div align="center">
 
-# 🛡️ Repo Trust
-
-**Multi-dimensional trust scoring for GitHub repositories — beyond the star count.**
-
-*Find out which repos are actually maintained, secure, and worth depending on.*
+<img src="assets/hero.svg" alt="Repo Trust — Multi-dimensional trust scoring for GitHub repositories — beyond the star count" width="100%">
 
 [![CI](https://github.com/Dmitrze/repo-trust/actions/workflows/ci.yml/badge.svg)](https://github.com/Dmitrze/repo-trust/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
@@ -16,31 +12,9 @@
 
 [**Install**](#install) · [**Quick start**](#quick-start) · [**Methodology**](docs/methodology.md) · [**Sponsor**](#sponsorship)
 
----
+<br>
 
-```
-$ repo-trust scan rust-lang/cargo
-
-Repo Trust Report  ·  rust-lang/cargo
-Trust Score: 60 / 100   ·   Category: Mixed   ·   Confidence: High
-
-  Module                     Score   Confidence
-  Star Authenticity            100   Low
-  Activity Health               55   High
-  Maintainer Health             53   High
-  Adoption Signals              56   High
-  Security & Readiness          58   High
-
-Top concerns:
-  • commits_last_90d         Activity      HighRisk
-  • median_issue_response    Activity      HighRisk
-  • contributor_retention    Maintainers   HighRisk
-
-Top strengths:
-  • days_since_last_commit   Activity      Positive
-  • commit_concentration     Maintainers   Positive
-  • scorecard_score          Security      Positive
-```
+<img src="assets/terminal.svg" alt="Terminal output: repo-trust scan rust-lang/cargo showing 5-module trust report" width="100%">
 
 </div>
 
@@ -153,8 +127,6 @@ repo-trust cache info              # cache location, size, row counts
 repo-trust cache prune             # remove expired entries
 repo-trust cache clear --all       # full reset
 ```
-
-> 🎬 **Demo GIF and screenshots will land with v0.1.1.** Until then, run `repo-trust scan` against your own favorite repo to see live output.
 
 ---
 

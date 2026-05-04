@@ -1,0 +1,58 @@
+<svg viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Repo Trust — Multi-dimensional trust scoring for GitHub repositories">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e1e2e"/>
+      <stop offset="100%" stop-color="#313244"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a6e3a1"/>
+      <stop offset="100%" stop-color="#94e2d5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="320" rx="16" fill="url(#bg)"/>
+
+  <g opacity="0.06" stroke="#cdd6f4" stroke-width="1">
+    <line x1="0" y1="40" x2="1200" y2="40"/>
+    <line x1="0" y1="80" x2="1200" y2="80"/>
+    <line x1="0" y1="120" x2="1200" y2="120"/>
+    <line x1="0" y1="160" x2="1200" y2="160"/>
+    <line x1="0" y1="200" x2="1200" y2="200"/>
+    <line x1="0" y1="240" x2="1200" y2="240"/>
+    <line x1="0" y1="280" x2="1200" y2="280"/>
+  </g>
+
+  <g transform="translate(80, 95)">
+    <path d="M70 0 L130 25 L130 95 Q130 135 70 150 Q10 135 10 95 L10 25 Z" fill="url(#shieldGrad)"/>
+    <path d="M48 72 L65 89 L96 56" stroke="#1e1e2e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="260" y="130" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif" font-size="82" font-weight="800" fill="#cdd6f4" letter-spacing="-3">Repo Trust</text>
+
+  <text x="260" y="172" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" font-size="22" font-weight="600" fill="#a6e3a1">Multi-dimensional trust scoring for GitHub repositories — beyond the star count.</text>
+
+  <text x="260" y="205" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" font-size="17" font-style="italic" fill="#7f849c">Find out which repos are actually maintained, secure, and worth depending on.</text>
+
+  <g transform="translate(260, 240)">
+    <g>
+      <rect width="108" height="34" rx="17" fill="#cba6f7" fill-opacity="0.18" stroke="#cba6f7" stroke-width="1.5"/>
+      <text x="54" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#cba6f7">⭐ Stars</text>
+    </g>
+    <g transform="translate(120, 0)">
+      <rect width="118" height="34" rx="17" fill="#94e2d5" fill-opacity="0.18" stroke="#94e2d5" stroke-width="1.5"/>
+      <text x="59" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#94e2d5">📈 Activity</text>
+    </g>
+    <g transform="translate(250, 0)">
+      <rect width="148" height="34" rx="17" fill="#f9e2af" fill-opacity="0.18" stroke="#f9e2af" stroke-width="1.5"/>
+      <text x="74" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#f9e2af">👥 Maintainers</text>
+    </g>
+    <g transform="translate(410, 0)">
+      <rect width="128" height="34" rx="17" fill="#89b4fa" fill-opacity="0.18" stroke="#89b4fa" stroke-width="1.5"/>
+      <text x="64" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#89b4fa">🌍 Adoption</text>
+    </g>
+    <g transform="translate(550, 0)">
+      <rect width="122" height="34" rx="17" fill="#f38ba8" fill-opacity="0.18" stroke="#f38ba8" stroke-width="1.5"/>
+      <text x="61" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#f38ba8">🔒 Security</text>
+    </g>
+  </g>
+</svg>
