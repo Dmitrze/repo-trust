@@ -36,13 +36,13 @@ async fn s001_project_packages_returns_sorted_vec() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path(
-            "/v3/projects/github.com/prometheus/prometheus/packages",
+            "/v3alpha/projects/github.com%2Fprometheus%2Fprometheus:packageversions",
         ))
         .respond_with(
             ResponseTemplate::new(200)
                 .insert_header("Content-Type", "application/json")
                 .set_body_string(
-                    r#"{"packages":[{"system":"GO","name":"github.com/prometheus/prometheus"}]}"#,
+                    r#"{"versions":[{"versionKey":{"system":"GO","name":"github.com/prometheus/prometheus","version":"v2.45.0"}}]}"#,
                 ),
         )
         .expect(1)
@@ -58,6 +58,51 @@ async fn s001_project_packages_returns_sorted_vec() {
     assert_eq!(packages.len(), 1, "expected one package, got {packages:?}");
     assert_eq!(packages[0].system, "GO");
     assert_eq!(packages[0].name, "github.com/prometheus/prometheus");
+}
+
+#[tokio::test]
+async fn s001b_project_packages_dedupes_versionkey_entries() {
+    // Real-world :packageversions returns one entry per (system, name,
+    // version) tuple. For a project with 50 releases of one package,
+    // there are 50 entries with the same (system, name). The client
+    // must dedupe to the unique (system, name) set.
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path(
+            "/v3alpha/projects/github.com%2Ftokio-rs%2Ftokio:packageversions",
+        ))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("Content-Type", "application/json")
+                .set_body_string(
+                    r#"{"versions":[
+                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.0.0"}},
+                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.1.0"}},
+                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.2.0"}},
+                        {"versionKey":{"system":"CARGO","name":"tokio-util","version":"0.7.0"}}
+                    ]}"#,
+                ),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let (client, _dir) = fresh_client(&server).await;
+    let packages = client.project_packages("tokio-rs", "tokio").await.unwrap();
+    assert_eq!(
+        packages,
+        vec![
+            PackageRef {
+                system: "CARGO".into(),
+                name: "tokio".into()
+            },
+            PackageRef {
+                system: "CARGO".into(),
+                name: "tokio-util".into()
+            },
+        ],
+        "must dedupe to unique (system, name) and stay sorted",
+    );
 }
 
 // ─── S-002 ────────────────────────────────────────────────────────────────
@@ -100,7 +145,9 @@ async fn s002_package_returns_weekly_downloads() {
 async fn s101_project_endpoint_404_returns_empty_vec() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
-        .and(path("/v3/projects/github.com/ghost/ghost/packages"))
+        .and(path(
+            "/v3alpha/projects/github.com%2Fghost%2Fghost:packageversions",
+        ))
         .respond_with(ResponseTemplate::new(404).set_body_string("not found"))
         .mount(&server)
         .await;
@@ -125,15 +172,17 @@ async fn s102_packages_sorted_by_system_then_name() {
     // Upstream returns packages in arbitrary order: (NPM,b), (GO,a), (NPM,a).
     // Client must sort to: (GO,a), (NPM,a), (NPM,b).
     Mock::given(method("GET"))
-        .and(path("/v3/projects/github.com/acme/multi/packages"))
+        .and(path(
+            "/v3alpha/projects/github.com%2Facme%2Fmulti:packageversions",
+        ))
         .respond_with(
             ResponseTemplate::new(200)
                 .insert_header("Content-Type", "application/json")
                 .set_body_string(
-                    r#"{"packages":[
-                        {"system":"NPM","name":"b"},
-                        {"system":"GO","name":"a"},
-                        {"system":"NPM","name":"a"}
+                    r#"{"versions":[
+                        {"versionKey":{"system":"NPM","name":"b","version":"1.0.0"}},
+                        {"versionKey":{"system":"GO","name":"a","version":"v1.0.0"}},
+                        {"versionKey":{"system":"NPM","name":"a","version":"1.0.0"}}
                     ]}"#,
                 ),
         )
@@ -174,7 +223,7 @@ async fn s201_5xx_returns_err() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path(
-            "/v3/projects/github.com/prometheus/prometheus/packages",
+            "/v3alpha/projects/github.com%2Fprometheus%2Fprometheus:packageversions",
         ))
         .respond_with(ResponseTemplate::new(503).set_body_string("upstream broke"))
         .mount(&server)

@@ -3,8 +3,9 @@
 //! Federated read-only client for the Adoption Signals module. Two endpoints
 //! are in scope per [`specs/deps-dev-client.md`](../../specs/deps-dev-client.md):
 //!
-//! - `GET /v3/projects/github.com/{owner}/{repo}/packages` —
-//!   list of published packages a GitHub repo maps to.
+//! - `GET /v3alpha/projects/github.com%2F{owner}%2F{repo}:packageversions` —
+//!   versions list for every package whose source-of-record points at this
+//!   GitHub repo. We dedupe to the underlying `(system, name)` pairs.
 //! - `GET /v3/systems/{system}/packages/{name}` —
 //!   per-package metadata, including `weeklyDownloads`.
 //!
@@ -31,6 +32,7 @@
 //! # }
 //! ```
 
+use std::collections::BTreeSet;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -94,19 +96,31 @@ impl Client {
         self
     }
 
-    /// `GET /v3/projects/github.com/{owner}/{repo}/packages` — published
-    /// packages mapped to this repository.
+    /// `GET /v3alpha/projects/github.com%2F{owner}%2F{repo}:packageversions`
+    /// — every published version whose source-of-record points at this
+    /// repository. Deduped to the unique `(system, name)` set.
+    ///
+    /// We use `v3alpha` rather than `v3` because v3 has no `:packages`
+    /// or `:packageversions` method on the project resource — it only
+    /// exposes the project metadata blob (stars/scorecard/etc.), with
+    /// no way to enumerate the published packages. v3alpha is the
+    /// upstream-recommended path for this query.
     ///
     /// Returns:
     /// - `Ok(vec)` with packages **sorted by `(system, name)`** for
     ///   deterministic JSON output (per spec §2 and scenario S-102).
-    /// - `Ok(Vec::new())` when deps.dev replies 404 — i.e. the repository has
-    ///   no packages mapped (scenario S-101).
+    /// - `Ok(Vec::new())` when deps.dev replies 404 — i.e. the repository
+    ///   has no packages mapped (scenario S-101).
     /// - `Err(_)` on parse failures, transport failures, or non-404 HTTP
     ///   errors (4xx other than 404, or 5xx).
     pub async fn project_packages(&self, owner: &str, repo: &str) -> Result<Vec<PackageRef>> {
-        let key = format!("deps_dev:projects:{owner}/{repo}:packages");
-        let path = format!("/v3/projects/github.com/{owner}/{repo}/packages");
+        let key = format!("deps_dev:projects:{owner}/{repo}:packageversions");
+        // The project resource key is `github.com/{owner}/{repo}` — the
+        // slashes inside it must be URL-encoded so the v3alpha router
+        // doesn't mistake them for path separators. The `:packageversions`
+        // suffix is a v3 method-style suffix and is NOT encoded.
+        let project_key = encode_project_key(owner, repo);
+        let path = format!("/v3alpha/projects/{project_key}:packageversions");
         let body = match self.fetch_json(&key, &path, TTL_DEPS_DEV).await {
             Ok(b) => b,
             Err(e) => {
@@ -118,9 +132,14 @@ impl Client {
         };
         let parsed: ProjectPackagesResponse =
             serde_json::from_slice(&body).context("parse deps.dev project packages response")?;
-        let mut packages = parsed.packages;
-        packages.sort();
-        Ok(packages)
+        // The :packageversions endpoint returns ONE entry per (system,
+        // name, version) tuple — for any project with more than one
+        // release, the same (system, name) pair shows up dozens or
+        // hundreds of times. Dedupe by (system, name); the BTreeSet
+        // also gives us the deterministic sort `project_packages`
+        // contracts on.
+        let unique: BTreeSet<PackageRef> = parsed.packages.into_iter().collect();
+        Ok(unique.into_iter().collect())
     }
 
     /// `GET /v3/systems/{system}/packages/{name}` — per-package metadata.
@@ -207,6 +226,21 @@ impl Client {
     }
 }
 
+/// Hand-rolled minimal percent-encoder for the deps.dev project key.
+/// `owner` and `repo` are GitHub identifiers, so the only legitimately
+/// problematic characters are the slashes we deliberately want to
+/// encode (`/` → `%2F`). We also escape `:` defensively in case the
+/// project ever needs to embed an org with one. Anything else is
+/// passed through — repo names are constrained by GitHub to
+/// `[A-Za-z0-9._-]`.
+///
+/// We do not pull `urlencoding` / `percent-encoding` runtime crates
+/// for two replacements.
+fn encode_project_key(owner: &str, repo: &str) -> String {
+    let escape = |s: &str| s.replace('/', "%2F").replace(':', "%3A");
+    format!("github.com%2F{}%2F{}", escape(owner), escape(repo))
+}
+
 // ─── DTOs ─────────────────────────────────────────────────────────────────
 
 /// Identity of one published package (`(system, name)` pair). Used as the
@@ -215,13 +249,62 @@ impl Client {
 /// `Ord` / `PartialOrd` implementations sort lexicographically on
 /// `(system, name)` — relied upon by [`Client::project_packages`] for
 /// deterministic output (scenario S-102).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PackageRef {
     /// Package system, e.g. `NPM`, `GO`, `PYPI`, `MAVEN`, `CARGO`.
     pub system: String,
     /// Package name within the system, e.g. `lodash`,
     /// `github.com/prometheus/prometheus`.
     pub name: String,
+}
+
+/// `PackageRef` deserialises from any of the three shapes deps.dev has
+/// shipped over the past two years:
+///
+/// 1. `{ "system": "...", "name": "..." }` (flat — pre-v3, still in
+///    some cached responses and the test fixtures we control).
+/// 2. `{ "packageKey": { "system": "...", "name": "..." } }` (the
+///    intermediate v3 shape some callers documented).
+/// 3. `{ "versionKey": { "system": "...", "name": "...", "version":
+///    "..." } }` (the actual current `:packageversions` shape — we
+///    discard the per-version `version` because [`Client::project_packages`]
+///    deduplicates to (system, name) anyway).
+///
+/// Same defensive-tolerant pattern as `deserialize_scorecard_date` in
+/// `src/api/scorecard.rs` (E1.7).
+impl<'de> Deserialize<'de> for PackageRef {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Inner {
+            system: String,
+            name: String,
+        }
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Wire {
+            Flat(Inner),
+            PackageKey {
+                #[serde(rename = "packageKey")]
+                package_key: Inner,
+            },
+            VersionKey {
+                #[serde(rename = "versionKey")]
+                version_key: Inner,
+            },
+        }
+        let inner = match Wire::deserialize(de)? {
+            Wire::Flat(i) => i,
+            Wire::PackageKey { package_key: i } => i,
+            Wire::VersionKey { version_key: i } => i,
+        };
+        Ok(Self {
+            system: inner.system,
+            name: inner.name,
+        })
+    }
 }
 
 /// Per-package metadata returned by `Client::package`.
@@ -246,10 +329,13 @@ pub struct PackageInfo {
     pub latest_version: Option<String>,
 }
 
-/// Internal envelope for the `/v3/projects/.../packages` response shape.
+/// Internal envelope for the project-packages response. deps.dev
+/// `:packageversions` returns `{ "versions": [...] }`; older v3 docs
+/// described `{ "packages": [...] }`. Accept either key so the parser
+/// stays robust against API drift.
 #[derive(Debug, Default, Deserialize)]
 struct ProjectPackagesResponse {
-    #[serde(default)]
+    #[serde(default, alias = "versions")]
     packages: Vec<PackageRef>,
 }
 
@@ -318,14 +404,8 @@ mod tests {
     /// commit `8c8ed7c`).
     const FIXTURES: &[(&str, &[(&str, &str)])] = &[
         // (fixture stem, list of (system, name) the fixture must contain)
-        (
-            "tokio-rs_tokio",
-            &[("CARGO", "tokio")],
-        ),
-        (
-            "django_django",
-            &[("PYPI", "django")],
-        ),
+        ("tokio-rs_tokio", &[("CARGO", "tokio")]),
+        ("django_django", &[("PYPI", "django")]),
         (
             "kubernetes_kubernetes",
             &[("GO", "github.com/kubernetes/kubernetes")],
@@ -339,8 +419,8 @@ mod tests {
                 "{}/tests/fixtures/deps_dev/{stem}.json",
                 env!("CARGO_MANIFEST_DIR")
             );
-            let body = std::fs::read(&path)
-                .unwrap_or_else(|e| panic!("missing fixture {path}: {e}"));
+            let body =
+                std::fs::read(&path).unwrap_or_else(|e| panic!("missing fixture {path}: {e}"));
             let parsed: ProjectPackagesResponse = serde_json::from_slice(&body)
                 .unwrap_or_else(|e| panic!("failed to parse {path}: {e}"));
             assert!(
@@ -377,7 +457,8 @@ mod tests {
         // Architect's hypothesis from E1.9 — accept it too in case
         // deps.dev ever switches the response shape from `versions`
         // to `packages` while keeping the nested key.
-        let body = br#"{ "packages": [ { "packageKey": { "system": "NPM", "name": "lodash" } } ] }"#;
+        let body =
+            br#"{ "packages": [ { "packageKey": { "system": "NPM", "name": "lodash" } } ] }"#;
         let parsed: ProjectPackagesResponse = serde_json::from_slice(body).unwrap();
         assert_eq!(parsed.packages.len(), 1);
         assert_eq!(parsed.packages[0].system, "NPM");

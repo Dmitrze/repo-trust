@@ -239,7 +239,9 @@ async fn mount_octocat(server: &MockServer) {
 
     // deps.dev: no packages mapped.
     Mock::given(method("GET"))
-        .and(path("/v3/projects/github.com/octocat/Hello-World/packages"))
+        .and(path(
+            "/v3alpha/projects/github.com%2Foctocat%2FHello-World:packageversions",
+        ))
         .respond_with(nf())
         .mount(server)
         .await;
@@ -429,7 +431,7 @@ async fn mount_prometheus(server: &MockServer) {
     // deps.dev: one Go package with weekly downloads.
     Mock::given(method("GET"))
         .and(path(
-            "/v3/projects/github.com/prometheus/prometheus/packages",
+            "/v3alpha/projects/github.com%2Fprometheus%2Fprometheus:packageversions",
         ))
         .respond_with(ok(PROMETHEUS_DEPS_DEV_PACKAGES))
         .mount(server)
@@ -604,7 +606,9 @@ async fn mount_cargo(server: &MockServer) {
         .await;
 
     Mock::given(method("GET"))
-        .and(path("/v3/projects/github.com/rust-lang/cargo/packages"))
+        .and(path(
+            "/v3alpha/projects/github.com%2Frust-lang%2Fcargo:packageversions",
+        ))
         .respond_with(ok(CARGO_DEPS_DEV_PACKAGES))
         .mount(server)
         .await;

@@ -152,7 +152,9 @@ async fn fixture_server() -> MockServer {
         .await;
     // deps.dev: no packages mapped (404 → empty Vec).
     Mock::given(method("GET"))
-        .and(path("/v3/projects/github.com/acme/widget/packages"))
+        .and(path(
+            "/v3alpha/projects/github.com%2Facme%2Fwidget:packageversions",
+        ))
         .respond_with(ResponseTemplate::new(404).set_body_string("{}"))
         .mount(&server)
         .await;
