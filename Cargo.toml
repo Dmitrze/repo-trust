@@ -110,6 +110,11 @@ criterion = { version = "0.5", features = ["async_tokio"] }
 # `figment` Jail used for hermetic env+file-scoped config tests; gated
 # behind the "test" feature in figment itself.
 figment = { version = "0.10", features = ["toml", "env", "test"] }
+# `pulldown-cmark` is used ONLY by the markdown-report round-trip unit
+# test (`src/reports/markdown_report.rs::tests::output_round_trips_*`)
+# and the snapshot test in `tests/reports_markdown_snapshot.rs`. It is
+# NOT a runtime dependency — see specs/reports-markdown.md §2.
+pulldown-cmark = { version = "0.10", default-features = false }
 
 # ─── Features ──────────────────────────────────────────────────────────
 [features]
