@@ -1,3 +1,11 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines
+)]
+
 //! Property-based tests for `features::maintainers::gini` and `bus_factor`.
 //!
 //! Invariants we want regardless of input distribution:

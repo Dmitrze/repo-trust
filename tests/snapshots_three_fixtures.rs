@@ -1,3 +1,12 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! End-to-end JSON snapshot tests for the three canonical reference repos.
 //!
 //! Day 5 acceptance gate: spin up a `MockServer` per fixture, run the
@@ -310,7 +319,7 @@ const PROMETHEUS_COMMITS: &str = r#"[
     {"sha":"c6","commit":{"author":{"name":"frank","email":"frank@example.org","date":"2025-06-12T10:00:00Z"},"message":"docs: roadmap"},"author":{"login":"frank","type":"User"}}
 ]"#;
 
-/// Two issues touched in the last 90 days — exercises the issues_enabled
+/// Two issues touched in the last 90 days — exercises the `issues_enabled`
 /// branch of the activity scorer.
 const PROMETHEUS_ISSUES: &str = r#"[
     {"number":101,"state":"closed","title":"slow query","user":{"login":"alice","type":"User"},"comments":4,"created_at":"2026-03-01T00:00:00Z","updated_at":"2026-04-10T00:00:00Z","closed_at":"2026-04-10T00:00:00Z"},

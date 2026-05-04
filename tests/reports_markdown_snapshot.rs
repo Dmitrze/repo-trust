@@ -1,3 +1,11 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines
+)]
+
 //! Insta snapshot test for the markdown report writer.
 //!
 //! Covers scenario S-401: a known-good 5-module `TrustReport` fixture
@@ -16,7 +24,8 @@ use repo_trust::models::scores::{Category, Confidence, ModuleResult, ModuleWeigh
 use time::OffsetDateTime;
 
 fn pinned_snapshot_at() -> OffsetDateTime {
-    // 2026-05-04T10:23:45Z — same value as the spec example.
+    // 2026-05-03T08:23:45Z — pinned for snapshot determinism.
+    // (Comment was incorrect on Day 4; reconciled per docs/day-5-polish.md §2c.)
     OffsetDateTime::from_unix_timestamp(1_777_796_625).unwrap()
 }
 

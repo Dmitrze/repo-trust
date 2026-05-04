@@ -1,3 +1,12 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! Integration test for the localhost web viewer.
 //!
 //! Drives the axum router via `oneshot` against a populated cache fixture

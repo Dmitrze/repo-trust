@@ -1,3 +1,11 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines
+)]
+
 //! End-to-end integration tests for `AdoptionModule::run` against a
 //! wiremock-backed federation of GitHub + deps.dev.
 //!

@@ -1,6 +1,15 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! End-to-end integration test running ALL 5 modules against a single
 //! wiremock fixture. Validates the Day-3 acceptance gate: "all 5 modules
-//! return real ModuleResult".
+//! return real `ModuleResult`".
 
 use assert_cmd::Command;
 use repo_trust::models::TrustReport;

@@ -1,3 +1,12 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! Property-based tests for the scoring aggregate and Maintainer Gini.
 //!
 //! These five invariants are exercised against randomly generated inputs to

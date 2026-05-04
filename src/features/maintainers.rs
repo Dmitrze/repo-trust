@@ -56,8 +56,7 @@ pub fn compute(raw: &MaintainersRawData, now: OffsetDateTime) -> MaintainerFeatu
         .filter(|c| {
             c.author
                 .as_ref()
-                .map(|u| !is_bot(&u.login, u.user_type.as_deref()))
-                .unwrap_or(true)
+                .map_or(true, |u| !is_bot(&u.login, u.user_type.as_deref()))
         })
         .collect();
 
@@ -67,8 +66,7 @@ pub fn compute(raw: &MaintainersRawData, now: OffsetDateTime) -> MaintainerFeatu
         let login = c
             .author
             .as_ref()
-            .map(|u| u.login.as_str())
-            .unwrap_or(c.commit.author.name.as_str());
+            .map_or(c.commit.author.name.as_str(), |u| u.login.as_str());
         *by_author.entry(login).or_insert(0) += 1;
     }
     let counts: Vec<u64> = by_author.values().copied().collect();
@@ -161,7 +159,7 @@ pub fn gini(values: &[u64]) -> f64 {
     let mut weighted: i128 = 0;
     for (i, &v) in sorted.iter().enumerate() {
         let coef = 2 * (i as i64 + 1) - n - 1;
-        weighted += coef as i128 * v as i128;
+        weighted += i128::from(coef) * i128::from(v);
     }
     let g = weighted as f64 / (n as f64 * total as f64);
     g.clamp(0.0, 1.0)

@@ -65,7 +65,9 @@ pub fn compute(raw: &SecurityRawData, now: OffsetDateTime) -> SecurityFeatures {
 }
 
 /// True when every non-draft release tag matches `vX.Y.Z` or `X.Y.Z`.
-/// Returns true for repos with zero releases (vacuously true).
+/// Returns **false** for repos with zero releases — no track record of
+/// semver discipline yet (per `docs/day-5-polish.md` §2 decision A).
+/// Scorer assigns the Neutral 50/100 sub-score in that case.
 fn semver_consistent(releases: &[crate::api::github::ReleaseMeta]) -> bool {
     let mut any = false;
     for r in releases.iter().filter(|r| !r.draft) {

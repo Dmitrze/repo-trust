@@ -111,15 +111,12 @@ pub fn write_row(report: &TrustReport, w: &mut impl Write) -> std::io::Result<()
     cells.push(format!("{:.1}", report.runtime_seconds));
 
     for module_name in MODULE_COLUMN_ORDER {
-        match find_module(&report.modules, module_name) {
-            Some(m) => {
-                cells.push(m.score.to_string());
-                cells.push(confidence_str(m.confidence).to_string());
-            },
-            None => {
-                cells.push(String::new());
-                cells.push(String::new());
-            },
+        if let Some(m) = find_module(&report.modules, module_name) {
+            cells.push(m.score.to_string());
+            cells.push(confidence_str(m.confidence).to_string());
+        } else {
+            cells.push(String::new());
+            cells.push(String::new());
         }
     }
 

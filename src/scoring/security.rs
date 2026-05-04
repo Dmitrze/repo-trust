@@ -203,12 +203,12 @@ pub fn score(features: &SecurityFeatures) -> (ModuleResult, Vec<EvidenceItem>) {
     // Fixed weights for non-Scorecard signals: docs=2.0, ci=1.0, semver=0.5, osv=0.5.
     // Scorecard adds its own weight when present.
     let mut total_weight = 2.0 + 1.0 + 0.5 + 0.5;
-    let mut weighted_sum = 2.0 * doc_score as f64
-        + 1.0 * ci_score as f64
-        + 0.5 * semver_score as f64
-        + 0.5 * osv_score as f64;
+    let mut weighted_sum = 2.0 * f64::from(doc_score)
+        + 1.0 * f64::from(ci_score)
+        + 0.5 * f64::from(semver_score)
+        + 0.5 * f64::from(osv_score);
     if let Some(s) = scorecard_subscore {
-        weighted_sum += scorecard_weight * s as f64;
+        weighted_sum += scorecard_weight * f64::from(s);
         total_weight += scorecard_weight;
     }
     let final_score = (weighted_sum / total_weight).round().clamp(0.0, 100.0) as u8;
@@ -249,7 +249,7 @@ fn count_present_docs(f: &SecurityFeatures) -> u8 {
 
 fn doc_score_from(f: &SecurityFeatures) -> u8 {
     // Each present doc contributes 20.
-    let n = count_present_docs(f) as u32;
+    let n = u32::from(count_present_docs(f));
     (n * 20).min(100) as u8
 }
 
@@ -400,7 +400,7 @@ mod tests {
         f.semver_consistent = true;
         let (_, ev) = score(&f);
         let mut codes: Vec<&str> = ev.iter().map(|e| e.code.as_str()).collect();
-        codes.sort();
+        codes.sort_unstable();
         codes.dedup();
         assert_eq!(codes.len(), ev.len(), "codes must be unique");
     }

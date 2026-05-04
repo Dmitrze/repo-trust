@@ -281,8 +281,7 @@ fn compute_confidence(features: &AdoptionFeatures, t: &AdoptionThresholds) -> Co
     // High when downloads clear the floor; otherwise Medium.
     if features
         .weekly_downloads
-        .map(|d| d >= t.high_confidence_downloads_floor)
-        .unwrap_or(false)
+        .is_some_and(|d| d >= t.high_confidence_downloads_floor)
     {
         Confidence::High
     } else {
@@ -489,7 +488,7 @@ mod tests {
         let f = popular();
         let (_, ev) = score(&f, &AdoptionThresholds::v1());
         let mut codes: Vec<&str> = ev.iter().map(|e| e.code.as_str()).collect();
-        codes.sort();
+        codes.sort_unstable();
         codes.dedup();
         assert_eq!(codes.len(), ev.len(), "codes must be unique");
     }

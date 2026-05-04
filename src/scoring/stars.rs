@@ -165,8 +165,7 @@ pub fn score(
             })),
             verdict: stars_verdict(s),
             rationale: format!(
-                "Max daily z-score = {:.2} over a rolling 28-day baseline lagged 7 days. ≥5 indicates a starring burst; ≥3 a notable spike.",
-                z
+                "Max daily z-score = {z:.2} over a rolling 28-day baseline lagged 7 days. ≥5 indicates a starring burst; ≥3 a notable spike."
             ),
         });
         Some(s)
@@ -326,7 +325,7 @@ fn bucket_lockstep(z: f64, bands: &[(f64, u8); 5]) -> u8 {
             return *sub_score;
         }
     }
-    bands.last().map(|(_, s)| *s).unwrap_or(0)
+    bands.last().map_or(0, |(_, s)| *s)
 }
 
 /// Map an observed ratio against an ecosystem-adjusted healthy threshold.
@@ -571,7 +570,7 @@ mod tests {
         let f = baseline();
         let (_, ev) = score(&f, &StarsThresholds::v1());
         let mut codes: Vec<&str> = ev.iter().map(|e| e.code.as_str()).collect();
-        codes.sort();
+        codes.sort_unstable();
         codes.dedup();
         assert_eq!(codes.len(), ev.len());
     }
