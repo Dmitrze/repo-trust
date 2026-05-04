@@ -1,0 +1,436 @@
+---
+source: tests/snapshots_three_fixtures.rs
+expression: report
+---
+{
+  "category": "HighRisk",
+  "evidence": [
+    {
+      "code": "active_contributors_last_90d",
+      "label": "Active contributors in the last 90 days",
+      "module": "activity",
+      "rationale": "0 unique contributor(s) in the last 90 days. Full credit at ≥4.",
+      "threshold": {
+        "full_credit": 4.0,
+        "zero": 1.0
+      },
+      "value": 0,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "commits_last_90d",
+      "label": "Commits in the last 90 days",
+      "module": "activity",
+      "rationale": "0 commit(s) in the last 90 days. Full credit at ≥30.",
+      "threshold": {
+        "full_credit": 30.0,
+        "zero": 0.0
+      },
+      "value": 0,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "no_commits_in_window",
+      "label": "No commits in the last 18 months",
+      "module": "activity",
+      "rationale": "The 18-month commit window contained zero commits.",
+      "value": 0,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "no_releases",
+      "label": "No published releases",
+      "module": "activity",
+      "rationale": "Repository has no published releases; this sub-score is dropped from the mean.",
+      "value": null,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "awesome_list_mentions",
+      "label": "Awesome-list mentions",
+      "module": "adoption",
+      "rationale": "0 awesome-list mention(s). 0 is the neutral baseline (most repos are not on awesome lists); ≥1 is a Positive boost.",
+      "value": 0,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "documentation_maturity",
+      "label": "Documentation maturity (README + docs/ + examples/)",
+      "module": "adoption",
+      "rationale": "Doc-maturity 0.20/1.0. README present; docs/ absent; examples/ absent.",
+      "threshold": {
+        "readme_words_full_credit": 500,
+        "readme_words_half_credit": 100
+      },
+      "value": {
+        "has_docs_dir": false,
+        "has_examples_dir": false,
+        "has_readme": true,
+        "readme_word_count": 18,
+        "score": 0.2
+      },
+      "verdict": "Concerning"
+    },
+    {
+      "code": "no_packages",
+      "label": "Repository publishes no package (or deps.dev returned no downloads)",
+      "module": "adoption",
+      "rationale": "Repository publishes no package; documentation maturity is used as the only adoption signal. This is a caveat, not a concern — many excellent repos (research, docs, examples) publish no package.",
+      "value": null,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "package_systems",
+      "label": "Distinct package systems published",
+      "module": "adoption",
+      "rationale": "0 distinct package system(s): none. Cross-ecosystem packaging is a strong adoption signal.",
+      "value": [],
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "bus_factor_proxy",
+      "label": "Bus-factor proxy (authors covering 50% of commits)",
+      "module": "maintainers",
+      "rationale": "0 author(s) needed to cover 50% of last-365d commits. Full credit at ≥5.",
+      "threshold": {
+        "healthy": 5
+      },
+      "value": 0,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "commit_gini",
+      "label": "Commit concentration (Gini coefficient)",
+      "module": "maintainers",
+      "rationale": "Gini = 0.000. ≤0.40 is a balanced multi-maintainer distribution; ≥0.85 indicates concentration.",
+      "threshold": {
+        "full_credit": 0.4,
+        "zero": 0.85
+      },
+      "value": 0.0,
+      "verdict": "Positive"
+    },
+    {
+      "code": "contributor_retention",
+      "label": "Contributor retention rate (cross-180d-window overlap)",
+      "module": "maintainers",
+      "rationale": "Retention = 0%. ≥50% is healthy; ≤10% indicates one-off contributors.",
+      "threshold": {
+        "full_credit": 0.5,
+        "zero": 0.1
+      },
+      "value": 0.0,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "governance_docs",
+      "label": "Presence of governance documents",
+      "module": "maintainers",
+      "rationale": "Looking for CODEOWNERS plus either MAINTAINERS.md or GOVERNANCE.md.",
+      "value": {
+        "has_codeowners": false,
+        "has_governance_doc": false,
+        "has_maintainers_md": false
+      },
+      "verdict": "Neutral"
+    },
+    {
+      "code": "ci_workflow_present",
+      "label": "CI workflow files present",
+      "module": "security",
+      "rationale": "No CI workflow files detected at the conventional paths.",
+      "value": false,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "documentation_presence",
+      "label": "Presence of governance + community documents",
+      "module": "security",
+      "rationale": "0/5 expected docs present (SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, LICENSE, CODEOWNERS).",
+      "value": {
+        "has_code_of_conduct": false,
+        "has_codeowners": false,
+        "has_contributing_md": false,
+        "has_license": false,
+        "has_security_md": false
+      },
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "has_license",
+      "label": "Repository has no detected LICENSE",
+      "module": "security",
+      "rationale": "No LICENSE / LICENSE.md / LICENSE.txt / COPYING found at the repo root.",
+      "value": false,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "osv_open_advisories",
+      "label": "Open OSV advisories on published packages",
+      "module": "security",
+      "rationale": "Day 2: per-package OSV mapping is deferred to Day 3 (Adoption + deps.dev). Counted as 0 advisories until then.",
+      "value": 0,
+      "verdict": "Positive"
+    },
+    {
+      "code": "scorecard_unavailable",
+      "label": "OpenSSF Scorecard report unavailable",
+      "module": "security",
+      "rationale": "Scorecard has not yet scored this repository. Falling back to doc + CI + semver signals only.",
+      "value": null,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "semver_consistency",
+      "label": "Release tags follow SemVer",
+      "module": "security",
+      "rationale": "Some release tags do not follow SemVer (or no tagged releases yet).",
+      "value": false,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "fork_to_star_ratio",
+      "label": "Forks-to-stars ratio",
+      "module": "stars",
+      "rationale": "fork/star ratio = 0.0000; ecosystem-adjusted healthy threshold ≥ 0.0400 (multiplier 1.00).",
+      "threshold": {
+        "ecosystem_multiplier": 1.0,
+        "healthy": 0.04
+      },
+      "value": 0.0,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "lockstep_window_too_short",
+      "label": "Lockstep timing window unavailable",
+      "module": "stars",
+      "rationale": "Sample spans fewer than 35 days (28 baseline + 7 lag) or carries no starred_at timestamps. Heuristic 2 contribution is dropped from the final formula.",
+      "value": null,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "low_activity_stargazer_share",
+      "label": "Share of sampled stargazers matching the 9-signal low-activity profile",
+      "module": "stars",
+      "rationale": "50.0% of 2 sampled stargazers match the 9-signal low-activity profile.",
+      "threshold": {
+        "bands": [
+          [
+            0.05,
+            100
+          ],
+          [
+            0.1,
+            85
+          ],
+          [
+            0.2,
+            65
+          ],
+          [
+            0.35,
+            40
+          ],
+          [
+            0.5,
+            20
+          ],
+          [
+            1.0,
+            0
+          ]
+        ],
+        "young_repo_leniency_pp": 0.05
+      },
+      "value": 0.5,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "recency_biased_sample",
+      "label": "Stargazer sample is recency-biased",
+      "module": "stars",
+      "rationale": "Day 3-4 sampling is recency-biased: the most-recent N stargazers are sampled directly. True uniform random sampling over the full stargazer history is deferred to Phase 2 deep mode.",
+      "value": 2,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "small_sample",
+      "label": "Stargazer sample below confidence threshold",
+      "module": "stars",
+      "rationale": "Sample size 2 is below 100 required for High confidence on Heuristic 1.",
+      "threshold": {
+        "high": 100,
+        "medium": 30
+      },
+      "value": 2,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "watcher_to_star_ratio",
+      "label": "Watchers-to-stars ratio",
+      "module": "stars",
+      "rationale": "watcher/star ratio = 0.1125; ecosystem-adjusted healthy threshold ≥ 0.0050 (multiplier 1.00).",
+      "threshold": {
+        "ecosystem_multiplier": 1.0,
+        "healthy": 0.005
+      },
+      "value": 0.1125,
+      "verdict": "Positive"
+    }
+  ],
+  "mode": "standard",
+  "modules": [
+    {
+      "confidence": "High",
+      "missing_data": [
+        "issues_no_responses",
+        "no_releases"
+      ],
+      "module": "activity",
+      "score": 0,
+      "sub_scores": {
+        "active_contributors_last_90d": 0,
+        "commit_recency": 0,
+        "commits_last_90d": 0
+      }
+    },
+    {
+      "confidence": "Low",
+      "module": "maintainers",
+      "score": 38,
+      "sub_scores": {
+        "bus_factor_proxy": 0,
+        "commit_concentration": 100,
+        "contributor_retention": 0,
+        "governance_docs": 50
+      }
+    },
+    {
+      "confidence": "Low",
+      "missing_data": [
+        "osv_deferred_to_phase_3",
+        "scorecard"
+      ],
+      "module": "security",
+      "score": 19,
+      "sub_scores": {
+        "ci_workflow": 0,
+        "documentation_presence": 0,
+        "osv_advisories": 100,
+        "semver_consistency": 50
+      }
+    },
+    {
+      "confidence": "Low",
+      "module": "stars",
+      "sample_size": 2,
+      "score": 34,
+      "sub_scores": {
+        "fork_to_star_ratio": 0,
+        "low_activity_share": 20,
+        "watcher_to_star_ratio": 100
+      }
+    },
+    {
+      "confidence": "Medium",
+      "missing_data": [
+        "no_packages"
+      ],
+      "module": "adoption",
+      "score": 23,
+      "sub_scores": {
+        "awesome_list_mentions": 50,
+        "documentation_maturity": 20,
+        "package_systems_count": 0
+      }
+    }
+  ],
+  "overall_confidence": "Low",
+  "overall_score": 18,
+  "repository": {
+    "default_branch": "master",
+    "full_name": "octocat/Hello-World",
+    "snapshot_at": "[REDACTED]",
+    "stars": 80,
+    "url": "https://github.com/octocat/Hello-World"
+  },
+  "runtime_seconds": 0,
+  "schema_version": "1.0.0",
+  "scoring_version": "1.0.0",
+  "snapshot_at": "[REDACTED]",
+  "top_concerns": [
+    {
+      "code": "active_contributors_last_90d",
+      "label": "Active contributors in the last 90 days",
+      "module": "activity",
+      "rationale": "0 unique contributor(s) in the last 90 days. Full credit at ≥4.",
+      "threshold": {
+        "full_credit": 4.0,
+        "zero": 1.0
+      },
+      "value": 0,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "commits_last_90d",
+      "label": "Commits in the last 90 days",
+      "module": "activity",
+      "rationale": "0 commit(s) in the last 90 days. Full credit at ≥30.",
+      "threshold": {
+        "full_credit": 30.0,
+        "zero": 0.0
+      },
+      "value": 0,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "no_commits_in_window",
+      "label": "No commits in the last 18 months",
+      "module": "activity",
+      "rationale": "The 18-month commit window contained zero commits.",
+      "value": 0,
+      "verdict": "Concerning"
+    }
+  ],
+  "top_strengths": [
+    {
+      "code": "commit_gini",
+      "label": "Commit concentration (Gini coefficient)",
+      "module": "maintainers",
+      "rationale": "Gini = 0.000. ≤0.40 is a balanced multi-maintainer distribution; ≥0.85 indicates concentration.",
+      "threshold": {
+        "full_credit": 0.4,
+        "zero": 0.85
+      },
+      "value": 0.0,
+      "verdict": "Positive"
+    },
+    {
+      "code": "osv_open_advisories",
+      "label": "Open OSV advisories on published packages",
+      "module": "security",
+      "rationale": "Day 2: per-package OSV mapping is deferred to Day 3 (Adoption + deps.dev). Counted as 0 advisories until then.",
+      "value": 0,
+      "verdict": "Positive"
+    },
+    {
+      "code": "watcher_to_star_ratio",
+      "label": "Watchers-to-stars ratio",
+      "module": "stars",
+      "rationale": "watcher/star ratio = 0.1125; ecosystem-adjusted healthy threshold ≥ 0.0050 (multiplier 1.00).",
+      "threshold": {
+        "ecosystem_multiplier": 1.0,
+        "healthy": 0.005
+      },
+      "value": 0.1125,
+      "verdict": "Positive"
+    }
+  ],
+  "weights_used": {
+    "activity": 0.25,
+    "adoption": 0.2,
+    "maintainers": 0.2,
+    "security": 0.15,
+    "stars": 0.2
+  }
+}

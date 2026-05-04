@@ -92,6 +92,14 @@ pub struct ScanArgs {
     /// to point at a wiremock server.
     #[arg(long, hide = true, env = "REPO_TRUST_API_BASE_URL")]
     pub api_base_url: Option<String>,
+
+    /// Pin the scan's `snapshot_at` to a fixed RFC 3339 / ISO 8601 instant.
+    /// Hidden — used by snapshot tests so that evidence values derived from
+    /// `now - commit_date` (e.g. `days_since_last_commit`) stay stable
+    /// across CI runs on different days. Production scans always use the
+    /// wall clock.
+    #[arg(long, hide = true, env = "REPO_TRUST_SNAPSHOT_AT")]
+    pub snapshot_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
@@ -176,7 +184,13 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
     let rng_seed = args.seed.unwrap_or_else(|| {
         crate::utils::sampling::derive_seed(&full_name, &scoring_version.to_string())
     });
-    let snapshot_at = OffsetDateTime::now_utc();
+    let snapshot_at = match &args.snapshot_at {
+        Some(s) => {
+            time::OffsetDateTime::parse(s, &time::format_description::well_known::Iso8601::DEFAULT)
+                .context("--snapshot-at must be ISO 8601 (e.g. 2026-05-03T12:00:00Z)")?
+        },
+        None => OffsetDateTime::now_utc(),
+    };
 
     // ─── Build context ────────────────────────────────────────────────
     let ctx = RepositoryContext {

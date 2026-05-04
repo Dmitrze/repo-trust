@@ -1,0 +1,501 @@
+---
+source: tests/snapshots_three_fixtures.rs
+expression: report
+---
+{
+  "category": "Mixed",
+  "evidence": [
+    {
+      "code": "active_contributors_last_90d",
+      "label": "Active contributors in the last 90 days",
+      "module": "activity",
+      "rationale": "3 unique contributor(s) in the last 90 days. Full credit at ≥4.",
+      "threshold": {
+        "full_credit": 4.0,
+        "zero": 1.0
+      },
+      "value": 3,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "commits_last_90d",
+      "label": "Commits in the last 90 days",
+      "module": "activity",
+      "rationale": "3 commit(s) in the last 90 days. Full credit at ≥30.",
+      "threshold": {
+        "full_credit": 30.0,
+        "zero": 0.0
+      },
+      "value": 3,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "days_since_last_commit",
+      "label": "Days since last commit",
+      "module": "activity",
+      "rationale": "Last commit 4 day(s) ago. Full credit at ≤14 days; zero at ≥365 days.",
+      "threshold": {
+        "full_credit": 14.0,
+        "zero": 365.0
+      },
+      "value": 4,
+      "verdict": "Positive"
+    },
+    {
+      "code": "days_since_last_release",
+      "label": "Days since last release",
+      "module": "activity",
+      "rationale": "Latest release was 18 day(s) ago. Full credit at ≤90 days.",
+      "threshold": {
+        "full_credit": 90.0,
+        "zero": 730.0
+      },
+      "value": 18,
+      "verdict": "Positive"
+    },
+    {
+      "code": "median_issue_first_response_hours",
+      "label": "Median issue first-response time (hours)",
+      "module": "activity",
+      "rationale": "Median first-response time across recent issues with comments is ~588.0h.",
+      "threshold": {
+        "full_credit": 48.0,
+        "zero": 720.0
+      },
+      "value": 588.0,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "awesome_list_mentions",
+      "label": "Awesome-list mentions",
+      "module": "adoption",
+      "rationale": "0 awesome-list mention(s). 0 is the neutral baseline (most repos are not on awesome lists); ≥1 is a Positive boost.",
+      "value": 0,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "documentation_maturity",
+      "label": "Documentation maturity (README + docs/ + examples/)",
+      "module": "adoption",
+      "rationale": "Doc-maturity 0.50/1.0. README present; docs/ absent; examples/ absent.",
+      "threshold": {
+        "readme_words_full_credit": 500,
+        "readme_words_half_credit": 100
+      },
+      "value": {
+        "has_docs_dir": false,
+        "has_examples_dir": false,
+        "has_readme": true,
+        "readme_word_count": 520,
+        "score": 0.5
+      },
+      "verdict": "Neutral"
+    },
+    {
+      "code": "package_systems",
+      "label": "Distinct package systems published",
+      "module": "adoption",
+      "rationale": "1 distinct package system(s): GO. Cross-ecosystem packaging is a strong adoption signal.",
+      "value": [
+        "GO"
+      ],
+      "verdict": "Neutral"
+    },
+    {
+      "code": "weekly_downloads",
+      "label": "Aggregated weekly downloads across published packages",
+      "module": "adoption",
+      "rationale": "100000 weekly downloads. Logarithmic banding: 0→0, 1000→25, 10000→50, 100000→75, 1000000+→100.",
+      "threshold": {
+        "band_100": 1000000,
+        "band_25": 1000,
+        "band_50": 10000,
+        "band_75": 100000
+      },
+      "value": 100000,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "bus_factor_proxy",
+      "label": "Bus-factor proxy (authors covering 50% of commits)",
+      "module": "maintainers",
+      "rationale": "3 author(s) needed to cover 50% of last-365d commits. Full credit at ≥5.",
+      "threshold": {
+        "healthy": 5
+      },
+      "value": 3,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "commit_gini",
+      "label": "Commit concentration (Gini coefficient)",
+      "module": "maintainers",
+      "rationale": "Gini = 0.000. ≤0.40 is a balanced multi-maintainer distribution; ≥0.85 indicates concentration.",
+      "threshold": {
+        "full_credit": 0.4,
+        "zero": 0.85
+      },
+      "value": 0.0,
+      "verdict": "Positive"
+    },
+    {
+      "code": "contributor_retention",
+      "label": "Contributor retention rate (cross-180d-window overlap)",
+      "module": "maintainers",
+      "rationale": "Retention = 0%. ≥50% is healthy; ≤10% indicates one-off contributors.",
+      "threshold": {
+        "full_credit": 0.5,
+        "zero": 0.1
+      },
+      "value": 0.0,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "governance_docs",
+      "label": "Presence of governance documents",
+      "module": "maintainers",
+      "rationale": "Looking for CODEOWNERS plus either MAINTAINERS.md or GOVERNANCE.md.",
+      "value": {
+        "has_codeowners": false,
+        "has_governance_doc": false,
+        "has_maintainers_md": false
+      },
+      "verdict": "Neutral"
+    },
+    {
+      "code": "top_authors",
+      "label": "Top 5 authors by commit count (last 365d, bots excluded)",
+      "module": "maintainers",
+      "rationale": "6 active human author(s) over the last 365 days.",
+      "value": [
+        {
+          "commits": 1,
+          "login": "alice"
+        },
+        {
+          "commits": 1,
+          "login": "bob"
+        },
+        {
+          "commits": 1,
+          "login": "carol"
+        },
+        {
+          "commits": 1,
+          "login": "dave"
+        },
+        {
+          "commits": 1,
+          "login": "erin"
+        }
+      ],
+      "verdict": "Neutral"
+    },
+    {
+      "code": "ci_workflow_present",
+      "label": "CI workflow files present",
+      "module": "security",
+      "rationale": "No CI workflow files detected at the conventional paths.",
+      "value": false,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "documentation_presence",
+      "label": "Presence of governance + community documents",
+      "module": "security",
+      "rationale": "0/5 expected docs present (SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, LICENSE, CODEOWNERS).",
+      "value": {
+        "has_code_of_conduct": false,
+        "has_codeowners": false,
+        "has_contributing_md": false,
+        "has_license": false,
+        "has_security_md": false
+      },
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "has_license",
+      "label": "Repository has no detected LICENSE",
+      "module": "security",
+      "rationale": "No LICENSE / LICENSE.md / LICENSE.txt / COPYING found at the repo root.",
+      "value": false,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "osv_open_advisories",
+      "label": "Open OSV advisories on published packages",
+      "module": "security",
+      "rationale": "Day 2: per-package OSV mapping is deferred to Day 3 (Adoption + deps.dev). Counted as 0 advisories until then.",
+      "value": 0,
+      "verdict": "Positive"
+    },
+    {
+      "code": "scorecard_score",
+      "label": "OpenSSF Scorecard score",
+      "module": "security",
+      "rationale": "Scorecard score 8.5/10 (run 8d ago). Federated weight 0.40.",
+      "threshold": {
+        "max": 10.0
+      },
+      "value": 8.5,
+      "verdict": "Positive"
+    },
+    {
+      "code": "semver_consistency",
+      "label": "Release tags follow SemVer",
+      "module": "security",
+      "rationale": "All release tags match `vX.Y.Z` or `X.Y.Z`.",
+      "value": true,
+      "verdict": "Positive"
+    },
+    {
+      "code": "fork_to_star_ratio",
+      "label": "Forks-to-stars ratio",
+      "module": "stars",
+      "rationale": "fork/star ratio = 0.1607; ecosystem-adjusted healthy threshold ≥ 0.0440 (multiplier 1.10).",
+      "threshold": {
+        "ecosystem_multiplier": 1.1,
+        "healthy": 0.044
+      },
+      "value": 0.160714,
+      "verdict": "Positive"
+    },
+    {
+      "code": "lockstep_window_too_short",
+      "label": "Lockstep timing window unavailable",
+      "module": "stars",
+      "rationale": "Sample spans fewer than 35 days (28 baseline + 7 lag) or carries no starred_at timestamps. Heuristic 2 contribution is dropped from the final formula.",
+      "value": null,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "low_activity_stargazer_share",
+      "label": "Share of sampled stargazers matching the 9-signal low-activity profile",
+      "module": "stars",
+      "rationale": "0.0% of 5 sampled stargazers match the 9-signal low-activity profile.",
+      "threshold": {
+        "bands": [
+          [
+            0.05,
+            100
+          ],
+          [
+            0.1,
+            85
+          ],
+          [
+            0.2,
+            65
+          ],
+          [
+            0.35,
+            40
+          ],
+          [
+            0.5,
+            20
+          ],
+          [
+            1.0,
+            0
+          ]
+        ],
+        "young_repo_leniency_pp": 0.05
+      },
+      "value": 0.0,
+      "verdict": "Positive"
+    },
+    {
+      "code": "recency_biased_sample",
+      "label": "Stargazer sample is recency-biased",
+      "module": "stars",
+      "rationale": "Day 3-4 sampling is recency-biased: the most-recent N stargazers are sampled directly. True uniform random sampling over the full stargazer history is deferred to Phase 2 deep mode.",
+      "value": 5,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "small_sample",
+      "label": "Stargazer sample below confidence threshold",
+      "module": "stars",
+      "rationale": "Sample size 5 is below 100 required for High confidence on Heuristic 1.",
+      "threshold": {
+        "high": 100,
+        "medium": 30
+      },
+      "value": 5,
+      "verdict": "Neutral"
+    },
+    {
+      "code": "watcher_to_star_ratio",
+      "label": "Watchers-to-stars ratio",
+      "module": "stars",
+      "rationale": "watcher/star ratio = 0.0214; ecosystem-adjusted healthy threshold ≥ 0.0050 (multiplier 1.00).",
+      "threshold": {
+        "ecosystem_multiplier": 1.0,
+        "healthy": 0.005
+      },
+      "value": 0.021429,
+      "verdict": "Positive"
+    }
+  ],
+  "mode": "standard",
+  "modules": [
+    {
+      "confidence": "High",
+      "module": "activity",
+      "score": 59,
+      "sub_scores": {
+        "active_contributors_last_90d": 67,
+        "commit_recency": 100,
+        "commits_last_90d": 10,
+        "days_since_last_release": 100,
+        "median_issue_response": 20
+      }
+    },
+    {
+      "confidence": "High",
+      "module": "maintainers",
+      "score": 53,
+      "sub_scores": {
+        "bus_factor_proxy": 60,
+        "commit_concentration": 100,
+        "contributor_retention": 0,
+        "governance_docs": 50
+      }
+    },
+    {
+      "confidence": "High",
+      "missing_data": [
+        "osv_deferred_to_phase_3"
+      ],
+      "module": "security",
+      "score": 55,
+      "sub_scores": {
+        "ci_workflow": 0,
+        "documentation_presence": 0,
+        "osv_advisories": 100,
+        "scorecard_score": 85,
+        "semver_consistency": 100
+      }
+    },
+    {
+      "confidence": "Low",
+      "module": "stars",
+      "sample_size": 5,
+      "score": 100,
+      "sub_scores": {
+        "fork_to_star_ratio": 100,
+        "low_activity_share": 100,
+        "watcher_to_star_ratio": 100
+      }
+    },
+    {
+      "confidence": "High",
+      "module": "adoption",
+      "score": 63,
+      "sub_scores": {
+        "awesome_list_mentions": 50,
+        "documentation_maturity": 50,
+        "package_systems_count": 75,
+        "weekly_downloads": 75
+      }
+    }
+  ],
+  "overall_confidence": "Low",
+  "overall_score": 62,
+  "repository": {
+    "default_branch": "main",
+    "full_name": "prometheus/prometheus",
+    "primary_language": "Go",
+    "snapshot_at": "[REDACTED]",
+    "stars": 56000,
+    "url": "https://github.com/prometheus/prometheus"
+  },
+  "runtime_seconds": 0,
+  "schema_version": "1.0.0",
+  "scoring_version": "1.0.0",
+  "snapshot_at": "[REDACTED]",
+  "top_concerns": [
+    {
+      "code": "commits_last_90d",
+      "label": "Commits in the last 90 days",
+      "module": "activity",
+      "rationale": "3 commit(s) in the last 90 days. Full credit at ≥30.",
+      "threshold": {
+        "full_credit": 30.0,
+        "zero": 0.0
+      },
+      "value": 3,
+      "verdict": "HighRisk"
+    },
+    {
+      "code": "median_issue_first_response_hours",
+      "label": "Median issue first-response time (hours)",
+      "module": "activity",
+      "rationale": "Median first-response time across recent issues with comments is ~588.0h.",
+      "threshold": {
+        "full_credit": 48.0,
+        "zero": 720.0
+      },
+      "value": 588.0,
+      "verdict": "Concerning"
+    },
+    {
+      "code": "contributor_retention",
+      "label": "Contributor retention rate (cross-180d-window overlap)",
+      "module": "maintainers",
+      "rationale": "Retention = 0%. ≥50% is healthy; ≤10% indicates one-off contributors.",
+      "threshold": {
+        "full_credit": 0.5,
+        "zero": 0.1
+      },
+      "value": 0.0,
+      "verdict": "HighRisk"
+    }
+  ],
+  "top_strengths": [
+    {
+      "code": "days_since_last_commit",
+      "label": "Days since last commit",
+      "module": "activity",
+      "rationale": "Last commit 4 day(s) ago. Full credit at ≤14 days; zero at ≥365 days.",
+      "threshold": {
+        "full_credit": 14.0,
+        "zero": 365.0
+      },
+      "value": 4,
+      "verdict": "Positive"
+    },
+    {
+      "code": "days_since_last_release",
+      "label": "Days since last release",
+      "module": "activity",
+      "rationale": "Latest release was 18 day(s) ago. Full credit at ≤90 days.",
+      "threshold": {
+        "full_credit": 90.0,
+        "zero": 730.0
+      },
+      "value": 18,
+      "verdict": "Positive"
+    },
+    {
+      "code": "commit_gini",
+      "label": "Commit concentration (Gini coefficient)",
+      "module": "maintainers",
+      "rationale": "Gini = 0.000. ≤0.40 is a balanced multi-maintainer distribution; ≥0.85 indicates concentration.",
+      "threshold": {
+        "full_credit": 0.4,
+        "zero": 0.85
+      },
+      "value": 0.0,
+      "verdict": "Positive"
+    }
+  ],
+  "weights_used": {
+    "activity": 0.25,
+    "adoption": 0.2,
+    "maintainers": 0.2,
+    "security": 0.15,
+    "stars": 0.2
+  }
+}
