@@ -73,19 +73,11 @@ expression: report
     },
     {
       "code": "no_packages",
-      "label": "Repository publishes no package (or deps.dev returned no downloads)",
+      "label": "Repository publishes no package",
       "module": "adoption",
-      "rationale": "Repository publishes no package; documentation maturity is used as the only adoption signal. This is a caveat, not a concern — many excellent repos (research, docs, examples) publish no package.",
-      "value": null,
+      "rationale": "deps.dev returned no published packages mapped to this repository. Many healthy repos legitimately publish no package (research, dotfiles, manifests, example collections); the documentation-maturity signal carries the adoption score in that case.",
+      "value": 0,
       "verdict": "Neutral"
-    },
-    {
-      "code": "package_systems",
-      "label": "Distinct package systems published",
-      "module": "adoption",
-      "rationale": "0 distinct package system(s): none. Cross-ecosystem packaging is a strong adoption signal.",
-      "value": [],
-      "verdict": "HighRisk"
     },
     {
       "code": "bus_factor_proxy",
@@ -332,7 +324,7 @@ expression: report
       }
     },
     {
-      "confidence": "Medium",
+      "confidence": "Low",
       "missing_data": [
         "no_packages"
       ],
@@ -346,7 +338,7 @@ expression: report
     }
   ],
   "overall_confidence": "Low",
-  "overall_score": 18,
+  "overall_score": 17,
   "repository": {
     "default_branch": "master",
     "full_name": "octocat/Hello-World",
@@ -356,7 +348,7 @@ expression: report
   },
   "runtime_seconds": 0,
   "schema_version": "1.0.0",
-  "scoring_version": "1.0.0",
+  "scoring_version": "1.1.0",
   "snapshot_at": "[REDACTED]",
   "top_concerns": [
     {

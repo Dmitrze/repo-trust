@@ -92,10 +92,10 @@ expression: report
       "verdict": "Neutral"
     },
     {
-      "code": "package_systems",
-      "label": "Distinct package systems published",
+      "code": "ecosystem_coverage",
+      "label": "Package ecosystem coverage",
       "module": "adoption",
-      "rationale": "1 distinct package system(s): CARGO. Cross-ecosystem packaging is a strong adoption signal.",
+      "rationale": "1 distinct package system(s) detected: CARGO. Cross-ecosystem packaging is a strong adoption signal.",
       "value": [
         "CARGO"
       ],
@@ -413,7 +413,7 @@ expression: report
   },
   "runtime_seconds": 0,
   "schema_version": "1.0.0",
-  "scoring_version": "1.0.0",
+  "scoring_version": "1.1.0",
   "snapshot_at": "[REDACTED]",
   "top_concerns": [
     {
