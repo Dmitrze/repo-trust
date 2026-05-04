@@ -6,7 +6,7 @@
 
 ## Current scoring version
 
-**`1.0.0`** — unreleased; ships with the first public release.
+**`1.1.0`** — Adoption confidence rule re-tiered around ecosystem coverage after deps.dev v3 dropped `weeklyDownloads` upstream. See change-log entry below.
 
 ## Default module weights (v1.0.0)
 
@@ -77,6 +77,24 @@ For users who care most about authenticity signals (e.g. funds doing diligence o
 ---
 
 ## Change log
+
+### `1.1.0` — 2026-05-04
+
+**Adoption — confidence rule re-tiered.** deps.dev v3 dropped the `weeklyDownloads` field from the project-packages endpoint as of mid-2026 (verified empty across CARGO / NPM / GO / PYPI / MAVEN). The previous Adoption confidence rule gated `High` on a downloads floor and was no longer satisfiable, dragging every real-world report's confidence to `Medium` and through confidence-weighting every overall confidence to `Medium`.
+
+The 1.1.0 rule grades Adoption confidence on:
+
+1. ecosystem coverage from the new `:packageversions` endpoint (`package_systems_count > 0`),
+2. archived state, and
+3. documentation maturity (≥ 0.50 on the maturity scale).
+
+See `docs/methodology.md#confidence-scoring-110` for the truth table and `src/scoring/adoption.rs::compute_confidence` for the implementation.
+
+Module weights, score arithmetic, sub-score thresholds, and the four other modules are **unchanged**. Per-module adoption scores are unchanged for any inputs (we changed confidence semantics, not weights). Overall scores can shift by ±1 point on repos whose adoption confidence changed tier, because confidence is a multiplicative weight in the aggregator (`src/scoring/aggregate.rs`).
+
+The `weekly_downloads` sub-score and evidence row are kept additively in the model — they will light up automatically if downloads come back from any source. Adding a cross-ecosystem download federation (PyPI / npm / crates.io stats APIs) is on the v0.2 roadmap as a separate scoring-version bump.
+
+The `no_packages` evidence row is now correctly emitted only when `package_systems_count == 0` (it previously fired whenever `weekly_downloads` was None — a proxy that became universally true under deps.dev v3, including for repos with multiple published packages). When ≥1 ecosystem is detected, a new `ecosystem_coverage` evidence row is emitted instead — Positive verdict for ≥2 ecosystems, Neutral for 1.
 
 ### `1.0.0` — unreleased
 

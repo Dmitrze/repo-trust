@@ -209,11 +209,25 @@ Full tables in `scoring-model.md`.
 
 ### Federation
 
-We do not collect download statistics ourselves — deps.dev does this at industrial scale and we'd be replicating their work badly. We pull `weekly_downloads` for whichever package system the repo publishes to and report it as one signal in the module.
+We do not collect download statistics ourselves — deps.dev does this at industrial scale and we'd be replicating their work badly. We map `repo → published packages` via deps.dev v3alpha (`/projects/github.com/{owner}/{repo}:packageversions`) and ingest the unique `(system, name)` set as the ecosystem-coverage signal.
+
+As of mid-2026, deps.dev v3 no longer surfaces `weeklyDownloads` on the per-package endpoint. The `weekly_downloads` sub-score remains in the model so it lights up automatically if the field comes back, or if a later release federates downloads from another source (e.g. `pypi.org/stats/`, `npmjs.com/downloads`, `crates.io/downloads`); none is added in v0.1.
+
+### Confidence (scoring 1.1.0+)
+
+Confidence in the adoption score depends on the breadth of evidence deps.dev returns for the repository, not on download volume:
+
+- **High**: the repository publishes at least one package on a recognised ecosystem (CARGO / NPM / PYPI / GO / MAVEN), is not archived, and has at least medium documentation maturity (≥ 0.50 on the maturity scale — typically a substantial README, or a shorter README plus a `docs/` directory). Two independent signals tell us the project is in active use.
+- **Medium**: packages are present but the repository is archived, or packages are present but documentation is thin, or no packages are detected but documentation is mature (suggests adoption in non-package form, e.g. a manifest or example repository).
+- **Low**: no published packages and no documentation depth.
+
+If deps.dev itself is unavailable for the scan (`deps_dev_error == true`), confidence short-circuits to Low — we genuinely don't know what we're missing.
+
+We previously gated High on a `weeklyDownloads` floor returned by deps.dev. As of deps.dev v3 (mid-2026), that field was discontinued upstream and no longer appears on the project endpoints. The methodology was updated to reflect what the federated source actually exposes today; see `docs/scoring-model.md` 1.1.0 for the full change-log entry.
 
 ### Graceful degradation
 
-Not every repo publishes a package. A research project on GitHub may have 10,000 stars and zero packages. We don't penalize this — we simply lower the module's confidence to Medium and surface the absence as a caveat, not a concern.
+Not every repo publishes a package. A research project on GitHub may have 10,000 stars and zero packages. We don't penalize this — we surface the absence as a Neutral caveat (`no_packages` evidence row), and confidence is graded by whether documentation maturity carries the signal instead.
 
 ---
 
