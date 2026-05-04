@@ -1,41 +1,30 @@
 name: CodeQL
 
-# GitHub native static analysis for Rust. Runs on every PR and push to
-# main, plus a weekly Sunday cron for advisory database refreshes.
+# DISABLED — CodeQL does not natively support Rust. CodeQL's supported
+# languages are JavaScript/TypeScript, Python, Java/Kotlin, C/C++, C#,
+# Go, Ruby, and Swift. Running it on a Rust repository fails on every
+# push because the autobuild step cannot analyse the source.
+#
+# Static analysis for Rust in this repo is covered by:
+#   - clippy (--all-targets --all-features -- -D warnings -W clippy::pedantic)
+#   - cargo-audit (RUSTSEC advisories)
+#   - cargo-deny (licenses, advisories, bans, sources)
+# all wired into .github/workflows/ci.yml.
+#
+# We keep this file as a workflow_dispatch-only stub so the workflow
+# entry stays in the repo's history — if GitHub adds Rust support later
+# the trigger can be re-enabled by restoring the original `on:` block.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    # Sunday 02:00 UTC.
-    - cron: '0 2 * * 0'
+  workflow_dispatch:
 
 jobs:
-  analyze:
-    name: Analyze
+  noop:
+    name: Disabled (Rust unsupported by CodeQL)
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [rust]
+    timeout-minutes: 1
     steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{ matrix.language }}"
+      - name: Explain why this workflow is a no-op
+        run: |
+          echo "CodeQL does not support Rust."
+          echo "See ci.yml for clippy, cargo-audit, and cargo-deny."
