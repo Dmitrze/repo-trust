@@ -1,0 +1,6 @@
+---
+source: tests/reports_csv_snapshot.rs
+expression: s
+---
+full_name,url,overall_score,overall_confidence,category,mode,scoring_version,snapshot_at,runtime_seconds,stars_score,stars_confidence,activity_score,activity_confidence,maintainers_score,maintainers_confidence,adoption_score,adoption_confidence,security_score,security_confidence,top_concern_code,top_concern_module
+acme/widget,https://github.com/acme/widget,73,High,Good,standard,1.0.0,2026-05-04T10:23:45.000000000Z,12.3,81,High,72,High,68,High,75,Medium,68,High,no_packages,adoption

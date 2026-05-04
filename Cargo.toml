@@ -115,6 +115,9 @@ figment = { version = "0.10", features = ["toml", "env", "test"] }
 # and the snapshot test in `tests/reports_markdown_snapshot.rs`. It is
 # NOT a runtime dependency — see specs/reports-markdown.md §2.
 pulldown-cmark = { version = "0.10", default-features = false }
+# CSV round-trip parser used by `reports::csv_report` tests only — never
+# pulled into the runtime build (see specs/reports-csv.md).
+csv = "1.3"
 
 # ─── Features ──────────────────────────────────────────────────────────
 [features]
