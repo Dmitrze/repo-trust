@@ -145,7 +145,14 @@ jobs:
       - name: Install tarpaulin
         run: cargo install cargo-tarpaulin --locked
       - name: cargo tarpaulin
-        run: cargo tarpaulin --workspace --all-features --ignore-tests --fail-under 75 --out Xml
+        # `--engine llvm` uses LLVM source-based coverage instead of the
+        # default ptrace engine. Required on Linux to attribute coverage
+        # from integration-test binaries back to library code — without
+        # it, e.g. cli/scan.rs reports 0/133 even though the
+        # `scan_format_dispatch` integration test exercises every line.
+        # macOS tarpaulin already uses LLVM internally, so the two
+        # platforms converge at ~89% with this flag.
+        run: cargo tarpaulin --workspace --all-features --ignore-tests --engine llvm --fail-under 75 --out Xml
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
