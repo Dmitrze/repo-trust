@@ -1,6 +1,6 @@
 //! Activity Health features — normalized inputs to the activity scorer.
 //!
-//! Computed from [`ActivityRawData`](crate::collectors::activity::ActivityRawData)
+//! Computed from [`crate::collectors::activity::ActivityRawData`]
 //! by [`compute`]. Pure function — no I/O, deterministic given inputs.
 
 use std::collections::HashSet;

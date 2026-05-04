@@ -101,7 +101,7 @@ impl Client {
     }
 
     /// `GET /repos/{owner}/{repo}/commits` over a `[since, until]` window,
-    /// paginated up to [`MAX_PAGES`].
+    /// paginated up to `MAX_PAGES`.
     pub async fn list_commits(
         &self,
         owner: &str,

@@ -233,7 +233,8 @@ pub struct PackageInfo {
     pub name: String,
     /// Weekly downloads where deps.dev provides them. **deps.dev returns this
     /// field as a JSON string** (e.g. `"50000000"`) rather than a number, so
-    /// we parse it via [`deserialize_string_to_u64_option`].
+    /// we parse it via the private `deserialize_string_to_u64_option`
+    /// helper.
     #[serde(
         default,
         rename = "weeklyDownloads",

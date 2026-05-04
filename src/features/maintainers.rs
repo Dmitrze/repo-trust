@@ -1,7 +1,7 @@
 //! Maintainer Health features — Gini, bus-factor proxy, retention, bot filter.
 //!
 //! Pure functions — no I/O. Computed from
-//! [`MaintainersRawData`](crate::collectors::maintainers::MaintainersRawData)
+//! [`crate::collectors::maintainers::MaintainersRawData`]
 //! by [`compute`].
 
 use std::collections::{BTreeMap, HashSet};

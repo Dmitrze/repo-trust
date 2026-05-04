@@ -1,7 +1,7 @@
 //! Security & Readiness features.
 //!
 //! Pure functions — no I/O. Computed from
-//! [`SecurityRawData`](crate::collectors::security::SecurityRawData) by [`compute`].
+//! [`crate::collectors::security::SecurityRawData`] by [`compute`].
 
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;

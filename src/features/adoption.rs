@@ -1,5 +1,5 @@
 //! Adoption Signals features — pure transformation from
-//! [`AdoptionRawData`](crate::collectors::adoption::AdoptionRawData) into the
+//! [`crate::collectors::adoption::AdoptionRawData`] into the
 //! normalized struct the scorer consumes.
 //!
 //! No I/O. Deterministic.
