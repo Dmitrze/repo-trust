@@ -355,7 +355,21 @@ mod tests {
     /// single space and folds the leading-space-before-`=` pattern that
     /// `comfy_table` produces when wrapping `key=value` cells.
     fn normalize_table_text(s: &str) -> String {
-        s.split_whitespace()
+        // Replace UTF-8 box-drawing characters (U+2500..=U+257F, used by
+        // comfy_table's UTF8_BORDERS_ONLY preset) with spaces, so a wrapped
+        // `│=85` cell becomes ` =85` and joins cleanly with the previous chunk.
+        let no_borders: String = s
+            .chars()
+            .map(|c| {
+                if ('\u{2500}'..='\u{257F}').contains(&c) {
+                    ' '
+                } else {
+                    c
+                }
+            })
+            .collect();
+        no_borders
+            .split_whitespace()
             .collect::<Vec<_>>()
             .join(" ")
             .replace(" =", "=")
@@ -521,21 +535,28 @@ mod tests {
     fn module_table_contains_all_module_display_names_and_scores() {
         let report = five_module_report();
         let out = render(&report, false);
-        // Long display names ("Security & Readiness") may wrap across
-        // multiple table rows under ContentArrangement::Dynamic — fold
-        // the wrap before comparing.
         let normalized = normalize_table_text(&out);
         for m in &report.modules {
             let display = module_display_name(&m.module);
-            assert!(
-                normalized.contains(display),
-                "module display name '{display}' missing in normalized output:\n{normalized}"
-            );
-            // Score is right-aligned to width 3.
+            // Long multi-word names like "Security & Readiness" may have
+            // Score / Confidence / Top-Sub-Score / Missing-Data cells from
+            // the neighbouring columns interleaved between their words once
+            // dynamic-arrangement wraps them across rows. Assert that each
+            // significant word (≥3 chars, to skip glyphs like "&") appears
+            // in the normalised output rather than the joined string.
+            for word in display
+                .split_whitespace()
+                .filter(|w| w.chars().count() >= 3)
+            {
+                assert!(
+                    normalized.contains(word),
+                    "display-name word '{word}' (from '{display}') missing in normalized output:\n{normalized}"
+                );
+            }
             let score_str = format!("{:>3}", m.score);
             assert!(
                 out.contains(&score_str),
-                "score {} missing in output:\n{out}",
+                "score {} missing in raw output:\n{out}",
                 m.score
             );
         }
@@ -729,13 +750,26 @@ mod tests {
 
     #[test]
     fn normalize_table_text_collapses_wrapped_cells() {
-        // Self-test for the helper so its behaviour is documented and
-        // regressions are caught locally rather than via the consumers.
-        let wrapped = "│ low_activity_share                 │\n│ =85                                │";
-        assert!(normalize_table_text(wrapped).contains("low_activity_share=85"));
-        let two_word = "│ Security &            55 │\n│ Readiness                │";
-        assert!(normalize_table_text(two_word).contains("Security & Readiness"));
-        let comma_wrap = "│ no_packages,  │\n│ no_dependents │";
-        assert!(normalize_table_text(comma_wrap).contains("no_packages, no_dependents"));
+        // Pattern 1: `=value` continuation with a leading space.
+        let space_eq = "│ low_activity_share │\n│ =85 │";
+        let n = normalize_table_text(space_eq);
+        assert!(n.contains("low_activity_share=85"), "got: {n}");
+
+        // Pattern 2: `=value` continuation with NO space — the real
+        // `comfy_table` wrap pattern that motivated the helper.
+        let no_space_eq = "│ low_activity_share │\n│=85 │";
+        let n = normalize_table_text(no_space_eq);
+        assert!(n.contains("low_activity_share=85"), "got: {n}");
+
+        // Pattern 3: comma-list wrap.
+        let comma_wrap = "│ no_packages, │\n│ no_dependents │";
+        let n = normalize_table_text(comma_wrap);
+        assert!(n.contains("no_packages, no_dependents"), "got: {n}");
+
+        // Pattern 4: box-drawing characters are mapped to whitespace.
+        let bordered = "┌──┐\n│ x │\n└──┘";
+        let n = normalize_table_text(bordered);
+        assert!(n.contains('x'), "got: {n}");
+        assert!(!n.contains('│'), "border char left in output: {n}");
     }
 }
