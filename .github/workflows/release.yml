@@ -102,7 +102,7 @@ jobs:
           cd ../../..
           (Get-FileHash repo-trust-${{ matrix.target }}.zip -Algorithm SHA256).Hash | Out-File repo-trust-${{ matrix.target }}.zip.sha256
       - name: Generate provenance
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             repo-trust-${{ matrix.target }}.tar.gz
