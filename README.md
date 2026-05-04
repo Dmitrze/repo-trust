@@ -2,27 +2,44 @@
 
 # 🛡️ Repo Trust
 
-**A command-line tool that tells you whether an open-source repository deserves your trust — beyond the star count.**
+**Multi-dimensional trust scoring for GitHub repositories — beyond the star count.**
+
+*Find out which repos are actually maintained, secure, and worth depending on.*
 
 [![CI](https://github.com/Dmitrze/repo-trust/actions/workflows/ci.yml/badge.svg)](https://github.com/Dmitrze/repo-trust/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Rust stable (1.75+)](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org/)
-[![Version: v0.1.0](https://img.shields.io/badge/version-v0.1.0-blue.svg)](CHANGELOG.md)
+[![Methodology: CC-BY-4.0](https://img.shields.io/badge/Methodology-CC--BY--4.0-lightgrey.svg)](docs/methodology.md)
+[![Rust 1.75+](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org/)
+[![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](CHANGELOG.md)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Dmitrze/repo-trust/badge)](https://scorecard.dev/viewer/?uri=github.com/Dmitrze/repo-trust)
 
-```
-$ repo-trust scan octocat/Hello-World
+[**Install**](#install) · [**Quick start**](#quick-start) · [**Methodology**](docs/methodology.md) · [**Sponsor**](#sponsorship)
 
-Repo Trust Report  ·  octocat/Hello-World
-Trust Score: 73 / 100   ·   Category: Good   ·   Confidence: Medium
+---
+
+```
+$ repo-trust scan rust-lang/cargo
+
+Repo Trust Report  ·  rust-lang/cargo
+Trust Score: 60 / 100   ·   Category: Mixed   ·   Confidence: High
 
   Module                     Score   Confidence
-  Star Authenticity            81    High
-  Activity Health              68    High
-  Maintainer Health            54    Medium
-  Adoption Signals             88    High
-  Security & Readiness         71    Medium
+  Star Authenticity            100   Low
+  Activity Health               55   High
+  Maintainer Health             53   High
+  Adoption Signals              56   High
+  Security & Readiness          58   High
+
+Top concerns:
+  • commits_last_90d         Activity      HighRisk
+  • median_issue_response    Activity      HighRisk
+  • contributor_retention    Maintainers   HighRisk
+
+Top strengths:
+  • days_since_last_commit   Activity      Positive
+  • commit_concentration     Maintainers   Positive
+  • scorecard_score          Security      Positive
 ```
 
 </div>
@@ -31,134 +48,171 @@ Trust Score: 73 / 100   ·   Category: Good   ·   Confidence: Medium
 
 ## Why this exists
 
-In 2024, researchers identified [**6 million suspected fake stars across 18,617 GitHub repositories**](https://arxiv.org/pdf/2412.13459). At one point, **16% of repositories with 50+ stars** showed signs of fake-star campaigns. GitHub stars are a popularity signal, not a trust signal — yet developers, scouts, and analysts use them as a shortcut for credibility every day.
+In 2024, researchers identified [**~6 million suspected fake stars across 18,617 GitHub repositories**](https://arxiv.org/pdf/2412.13459) — about **16% of repos with 50+ stars** showed fake-star campaign signals. Forks lag reality. "Last commit 2 days ago" tells you nothing about a one-person bus factor or a stale Scorecard.
 
-Existing tools fix part of the problem:
+GitHub stars are a popularity signal, not a trust signal — yet developers, scouts, and procurement teams use them as a shortcut for credibility every day.
+
+Existing tools fix only part of the problem:
+
 - **OpenSSF Scorecard** is excellent — but it scores *security*, not trust.
 - **deps.dev** aggregates rich data — but is API-only, no opinion.
 - **Snyk Advisor** and **Socket.dev** are SaaS-gated.
 - **StarScout** is a research artifact, not a tool you can install.
 
-**Repo Trust** is the missing diligence layer: a free, fully open-source, locally-runnable command-line tool that combines five trust dimensions into one explainable report.
+**Repo Trust** is the missing diligence layer: a free, open-source, locally-runnable CLI that combines five trust dimensions into one explainable report.
 
 ---
 
 ## What it does
 
-For any public GitHub repository, `repo-trust scan` computes a **Trust Score (0–100)** broken into five modules:
+For any public GitHub repository, `repo-trust scan` produces a **Trust Score (0–100)** broken into five modules:
 
 | Module | What it measures |
 | --- | --- |
-| 🌟 **Star Authenticity** | Are the popularity signals organic? Detects fake-star campaign patterns using StarScout-style heuristics (low-activity stargazer share, lockstep timing). |
-| 🩺 **Activity Health** | Is the repo alive? Commit cadence, release rhythm, issue/PR latency, contributor activity over multiple windows. |
-| 👥 **Maintainer Health** | Is stewardship sustainable? Bus-factor proxy, commit/review concentration, contributor retention. |
-| 📈 **Adoption Signals** | Is it actually used? Package-registry downloads, GitHub dependents, ecosystem citations. |
-| 🛡️ **Security & Readiness** | Is it ready for production use? Federates OpenSSF Scorecard, OSV vulnerabilities, presence of `SECURITY.md` / CI / branch protection. |
+| ⭐ **Star Authenticity** | Are the popularity signals organic? Detects fake-star patterns using the StarScout 9-signal low-activity profile composite + lockstep timing z-score + ecosystem-aware fork/watcher ratios. |
+| 📈 **Activity Health** | Is the repo alive? Commit cadence over 30/90/365-day windows, release rhythm, issue & PR latency, contributor activity. |
+| 👥 **Maintainer Health** | Is stewardship sustainable? Bus-factor proxy, Gini coefficient on commits-by-author, contributor retention, governance docs. |
+| 🌍 **Adoption Signals** | Is it actually used? Federates [deps.dev](https://deps.dev) for package presence + weekly downloads. Documentation maturity. |
+| 🔒 **Security & Readiness** | Is it ready for production? Federates [OpenSSF Scorecard](https://scorecard.dev) (freshness-weighted) + OSV vulnerabilities + doc presence + CI workflows + semver discipline. |
 
-Every score comes with **evidence**, a **confidence band** (Low / Medium / High), and **caveats** when data is partial. We never say "this repo is fraud." We say "X% of sampled stargazers match a low-activity profile" and let you draw the conclusion.
+Every score comes with **evidence**, a **confidence band** (Low / Medium / High), and **caveats** when data is partial. We never say *"this repo is fraud."* We say *"X% of sampled stargazers match a low-activity profile"* and let you draw the conclusion.
+
+**Federation, not replication.** We *consume* OpenSSF Scorecard, deps.dev, OSV, and GitHub's APIs through thin ETag-aware clients with local SQLite caching. We do not duplicate what they do.
 
 ---
 
-## Install (target — not yet shipped)
+## Install
+
+### From source (current)
 
 ```bash
-# Cargo (Rust) — primary
-cargo install repo-trust
-
-# Homebrew (planned, v1.1)
-brew install dmitrze/tap/repo-trust
-
-# Docker
-docker run --rm ghcr.io/dmitrze/repo-trust scan octocat/Hello-World
-
-# Standalone binaries (planned, v1.1)
-# Linux x86_64, Linux arm64, macOS arm64, Windows x86_64
-# Download from: https://github.com/Dmitrze/repo-trust/releases
+cargo install --git https://github.com/Dmitrze/repo-trust --tag v0.1.0
 ```
 
-> **⚠️ Project status:** Pre-alpha. APIs and outputs will change before `v1.0.0`. Do not depend on this in production yet. See [the roadmap](docs/PRD.md#12-roadmap).
+Requires Rust 1.75+. Install Rust via [rustup.rs](https://rustup.rs/) if you don't have it.
 
----
+### Coming with v0.1.x
 
-## Use it
+- 📦 `cargo install repo-trust` from crates.io
+- 🍺 Homebrew formula
+- 🐳 Docker image (`ghcr.io/dmitrze/repo-trust`)
+- 📥 Standalone binaries for Linux x86_64/arm64, macOS arm64, Windows x86_64
 
-### Single repo
+### Recommended setup
+
 ```bash
-# Default standard mode, writes to ./repo-trust-reports/
-repo-trust scan octocat/Hello-World
-
-# Quick mode (< 5 seconds, headline signals only)
-repo-trust scan octocat/Hello-World --mode quick
-
-# Deep mode (full stargazer sampling, graph analysis, requires GITHUB_TOKEN)
+# Set a GitHub token for higher rate limits (5000/hr instead of 60/hr)
+# Create one at: https://github.com/settings/tokens (scope: public_repo)
 export GITHUB_TOKEN=ghp_...
-repo-trust scan octocat/Hello-World --mode deep
-```
-
-### Specific modules
-```bash
-repo-trust scan octocat/Hello-World --modules activity,maintainers,security
-repo-trust scan octocat/Hello-World --skip-modules stars
-```
-
-### Batch mode
-```bash
-echo "facebook/react" >> repos.txt
-echo "vercel/next.js" >> repos.txt
-echo "django/django" >> repos.txt
-
-repo-trust batch repos.txt --format table --output ./reports/
-repo-trust batch repos.txt --json > batch.json
-```
-
-### Dig deeper
-```bash
-repo-trust explain octocat/Hello-World        # full evidence walkthrough
-repo-trust serve                              # localhost:8765 web viewer
-repo-trust export octocat/Hello-World --md --json --csv
 ```
 
 ---
 
-## How is it different from OpenSSF Scorecard?
+## Quick start
 
-OpenSSF Scorecard answers: **"Does this project follow security best practices?"**
+### Scan one repo
 
-Repo Trust answers: **"Should I trust this repository?"**
+```bash
+# Default standard mode — 5 modules, ~30s, ~200 API calls
+repo-trust scan rust-lang/cargo
 
-| Question | OpenSSF Scorecard | Repo Trust |
+# Quick mode — headline signals only, <5s, ~30 API calls
+repo-trust scan rust-lang/cargo --mode quick
+
+# Deep mode — full stargazer sampling, <5min, ~2000 API calls
+repo-trust scan rust-lang/cargo --mode deep
+```
+
+### Output formats
+
+```bash
+repo-trust scan rust-lang/cargo --format json | jq          # for scripting
+repo-trust scan rust-lang/cargo --format md > report.md     # for PRs / docs
+repo-trust scan rust-lang/cargo --format csv >> batch.csv   # for spreadsheets
+repo-trust scan rust-lang/cargo --format json,md,csv        # multiple at once
+```
+
+### Selective modules
+
+```bash
+repo-trust scan rust-lang/cargo --modules security,maintainers
+repo-trust scan rust-lang/cargo --skip-modules stars
+```
+
+### Local web viewer
+
+```bash
+repo-trust serve
+# → open http://localhost:8765
+```
+
+### Cache management
+
+```bash
+repo-trust cache info              # cache location, size, row counts
+repo-trust cache prune             # remove expired entries
+repo-trust cache clear --all       # full reset
+```
+
+> 🎬 **Demo GIF and screenshots will land with v0.1.1.** Until then, run `repo-trust scan` against your own favorite repo to see live output.
+
+---
+
+## Use cases
+
+### 🔍 Picking between alternatives
+
+You're choosing between three HTTP client libraries. Run `repo-trust scan` on each — compare maintainer concentration, adoption signal, security posture side-by-side. Decide with data instead of GitHub-stars vibes.
+
+### 🛡 Security / procurement review
+
+You're reviewing the dependency graph of a company project. Use `repo-trust scan` against each top-level dep. The deterministic JSON output is auditable and reproducible — paste it directly into a vendor-review checklist.
+
+### 📈 As a maintainer
+
+Score your own repo. The per-module breakdown tells you exactly which axes are weak — solo maintainer? Missing CODEOWNERS? Stale Scorecard? — and what's strong. Improvements are concrete and actionable.
+
+---
+
+## How it's different
+
+### vs OpenSSF Scorecard
+
+OpenSSF Scorecard answers: *"Does this project follow security best practices?"*
+Repo Trust answers: *"Should I trust this repository — across all dimensions?"*
+
+| Question | Scorecard | Repo Trust |
 | --- | --- | --- |
-| Is the repo actively maintained? | ✅ (maintained check) | ✅ (Activity Health module) |
+| Is the repo actively maintained? | ✅ | ✅ |
 | Are there CI workflows and signed releases? | ✅ | ✅ (federates Scorecard) |
-| Does it have unfixed vulnerabilities? | ✅ | ✅ (federates OSV via Scorecard) |
-| **Are the stars organic?** | ❌ | ✅ (Star Authenticity) |
-| **Is one maintainer doing 90% of the work?** | ❌ | ✅ (Maintainer Health) |
-| **Is the project actually adopted in the wild?** | ❌ | ✅ (Adoption Signals) |
-| **What's the overall trust signal?** | ❌ (security only) | ✅ (weighted composite) |
+| Does it have unfixed vulnerabilities? | ✅ | ✅ (federates OSV) |
+| **Are the stars organic?** | ❌ | ✅ Star Authenticity |
+| **Is one maintainer doing 90% of the work?** | ❌ | ✅ Maintainer Health |
+| **Is the project actually adopted in the wild?** | ❌ | ✅ Adoption Signals |
+| **What's the overall trust signal?** | ❌ (security only) | ✅ Weighted composite |
 
-We **federate** Scorecard's security score rather than replicating it. If you only want security, run Scorecard. If you want trust, run us.
+We **federate** Scorecard rather than replicate it. Scorecard's score contributes ~50% of our Security & Readiness module when fresh. If you only need security, run Scorecard. If you need trust, run us.
 
----
-
-## How is it different from Snyk Advisor / Socket.dev?
+### vs Snyk Advisor / Socket.dev
 
 - **Open source.** Apache-2.0. No paid tier.
 - **CLI-first.** No SaaS account required.
-- **Local-first.** No telemetry by default.
+- **Local-first.** No telemetry.
 - **Explainable.** Every score has evidence and a confidence band.
 - **Reproducible.** Same inputs + scoring version → byte-identical JSON.
 - **Versioned methodology.** Scoring changes are SemVer-tracked.
 
 ---
 
-## Methodology
+## Methodology highlights
 
-Read the full methodology in [`docs/methodology.md`](docs/methodology.md). Highlights:
+Read the full methodology in [`docs/methodology.md`](docs/methodology.md) (CC-BY-4.0 — citable, adaptable). Key principles:
 
 - **No black-box ML in v1.** Scoring is a transparent weighted-evidence model with documented thresholds.
 - **Confidence is independent of score.** A high-score-low-confidence repo is presented differently than a high-score-high-confidence repo.
-- **Federate, don't replicate.** We import OpenSSF Scorecard, deps.dev, and OSV outputs as inputs to our modules.
-- **Conservative by design.** When data is partial, we report lower confidence. False positives on the fake-star flag are treated as worse than false negatives.
+- **Federate, don't replicate.** We import OpenSSF Scorecard, deps.dev, and OSV outputs as inputs, never duplicate them.
+- **Conservative by design.** When data is partial, we report lower confidence. False positives on the fake-star flag are treated as worse than false negatives — real maintainers shouldn't be smeared by software.
+- **Deterministic output.** Same input bytes ⇒ same output bytes (modulo `snapshot_at` and `runtime_seconds`). Enforced by snapshot tests + property tests. See [ADR-0007](docs/adr/0007-deterministic-output.md).
 
 ---
 
@@ -168,54 +222,74 @@ Read the full methodology in [`docs/methodology.md`](docs/methodology.md). Highl
 | --- | --- |
 | [`docs/PRD.md`](docs/PRD.md) | Product Requirements — scope, goals, modules, roadmap |
 | [`docs/architecture.md`](docs/architecture.md) | Architecture — modules, data flow, technology choices |
-| [`docs/methodology.md`](docs/methodology.md) | Public methodology — what we measure and how |
+| [`docs/methodology.md`](docs/methodology.md) | Public methodology — what we measure and how (CC-BY-4.0) |
 | [`docs/scoring-model.md`](docs/scoring-model.md) | Versioned scoring weights, thresholds, change log |
 | [`docs/module-specs.md`](docs/module-specs.md) | Per-module input/output contracts |
-| [`docs/benchmark-plan.md`](docs/benchmark-plan.md) | How we benchmark and validate our scoring |
+| [`docs/benchmark-plan.md`](docs/benchmark-plan.md) | How we benchmark and validate scoring |
 | [`docs/api-notes.md`](docs/api-notes.md) | GitHub API quirks, rate-limit notes |
 | [`docs/governance.md`](docs/governance.md) | Project governance |
-| [`docs/adr/`](docs/adr/) | Architecture Decision Records |
+| [`docs/adr/`](docs/adr/) | 12 Architecture Decision Records |
 
 ---
 
 ## Project status
 
-**Phase 0 — Research foundation** ✅ (this PRD and architecture)
-**Phase 1 — Core CLI MVP** 🛠️ in progress
-**Phase 2 — Star Authenticity & Adoption** ⏳
-**Phase 3 — Deep mode & local viewer** ⏳
+**v0.1.0** — alpha release. All five modules ship end-to-end. 274 tests (unit + integration + snapshot + property). Strict CI gates: clippy::pedantic, cargo-deny, cargo-audit, tarpaulin coverage ≥75%, rustdoc -D warnings. APIs and outputs may change before `v1.0.0` — pin a version when integrating.
 
-See the [full roadmap in the PRD](docs/PRD.md#12-roadmap).
+See [the roadmap](docs/PRD.md#12-roadmap) for what's next: Python/Java/Ruby ecosystem support, deep-mode improvements, GitLab adapter, `--exit-code-on-category` for CI policy gates.
 
 ---
 
 ## Contributing
 
-We need help. The fastest ways to make a difference:
+Contributions are very welcome. The fastest ways to make a difference:
 
-1. **Try the tool** (once Phase 1 ships) and file issues with real-world repos where the score feels off.
-2. **Add module specs** — extend `docs/module-specs.md` with edge cases.
-3. **Curate the benchmark set** — propose repos for the benchmark categories.
-4. **Add a new module** — see [the plugin design](docs/architecture.md#4-module-contract) (planned for v1.2; we welcome design input now).
+1. **Try it on your favorite repos** and file issues where the score feels off — real-world feedback shapes calibration.
+2. **Curate the benchmark set** in [`examples/benchmark-set.csv`](examples/benchmark-set.csv) — propose repos for the trust categories.
+3. **Add module signals** — extend [`docs/module-specs.md`](docs/module-specs.md) with edge cases.
+4. **Translate the methodology** — `docs/methodology.md` is CC-BY-4.0; translations are welcome.
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR. We follow [Conventional Commits](https://www.conventionalcommits.org/) and the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) before opening a PR. We follow [Conventional Commits](https://www.conventionalcommits.org/).
+
+Watch for issues labeled [`good first issue`](https://github.com/Dmitrze/repo-trust/issues?q=is%3Aopen+label%3A%22good+first+issue%22) — accessible entry points for first-time contributors.
 
 ---
 
 ## Sponsorship
 
-Repo Trust is built and maintained as a community project. If your team uses it in CI or for diligence at scale, please consider sponsoring its maintenance.
+Repo Trust is and will remain free, Apache-2.0, and self-hostable forever. **No paid tier. No SaaS gating. No telemetry.** There will never be a "Repo Trust Pro."
 
-[![GitHub Sponsors](https://img.shields.io/github/sponsors/Dmitrze?logo=GitHub-Sponsors&style=for-the-badge)](https://github.com/sponsors/Dmitrze)
+It is built and maintained by an independent developer. Sustainability depends on sponsorship.
 
-Sponsorship goes directly to maintainer time. We have **no paid tier and no plans for one**. There will never be a "Repo Trust Pro." Funding lets the existing OSS project survive.
+[![Sponsor on GitHub](https://img.shields.io/github/sponsors/Dmitrze?logo=GitHub-Sponsors&style=for-the-badge&label=Sponsor)](https://github.com/sponsors/Dmitrze)
 
-We are also applying to:
-- [GitHub Secure Open Source Fund](https://github.com/open-source/github-secure-open-source-fund)
-- [Tidelift](https://tidelift.com/)
-- [Open Source Collective](https://opencollective.com/opensource)
+### For individuals
 
-If you represent a company that benefits from supply-chain security tooling and you'd like to discuss enterprise sponsorship, open a [discussion](https://github.com/Dmitrze/repo-trust/discussions).
+GitHub Sponsors monthly tiers (tentative — finalized with v0.1.0 launch):
+
+| Tier | Monthly | Benefit |
+| --- | --- | --- |
+| Bronze | $25 | Name in CONTRIBUTORS.md |
+| Silver | $100 | Name + small logo on README sponsors section |
+| Gold | $500 | Logo on README + priority issue triage |
+| Platinum | $2,000 | Logo + dedicated quarterly office-hours call |
+| Enterprise | $10,000+ | All of the above + roadmap input |
+
+### For companies
+
+If your engineering team uses Repo Trust for dependency review, vendor diligence, or supply-chain hygiene, sponsorship buys you direct logo placement, priority triage, and (at higher tiers) roadmap input. [Open a discussion](https://github.com/Dmitrze/repo-trust/discussions) with the `sponsorship` tag, or reach out via the maintainer link below.
+
+### For funds & grants
+
+Repo Trust is a strong fit for several open-source funding programs:
+
+- 💖 [GitHub Secure Open Source Fund](https://github.blog/security/github-secure-open-source-fund/) — supply-chain security tooling
+- 🇪🇺 [Sovereign Tech Fund](https://www.sovereign.tech/) — critical OSS infrastructure (Germany)
+- 🌍 [NLnet Foundation](https://nlnet.nl/) — Next Generation Internet themes (EU)
+- 🦊 [Mozilla MOSS](https://www.mozilla.org/en-US/moss/) — security + privacy tooling
+- 🔬 [Chan Zuckerberg Initiative EOSS](https://chanzuckerberg.com/eoss/) — essential open-source software
+
+The methodology document is CC-BY-4.0, suitable for academic citation and grant work.
 
 ---
 
@@ -233,16 +307,31 @@ If you publish research on repository trust, signal, or supply-chain integrity a
 
 ---
 
+## Disclaimer
+
+`repo-trust` produces a probabilistic signal designed to assist human judgment. It is **not** a security audit, legal advice, or a substitute for due diligence. Categories like `HighRisk` reflect score thresholds against documented heuristics, not allegations of misconduct. False positives can occur — please report them via [GitHub Issues](https://github.com/Dmitrze/repo-trust/issues).
+
+---
+
 ## License
 
-[Apache 2.0](LICENSE) © 2026 Repo Trust contributors
+- **Code:** [Apache License 2.0](LICENSE) © 2026 Repo Trust contributors
+- **Methodology** (`docs/methodology.md`): additionally [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) — citable and adaptable
 
-The methodology documents in `docs/` are additionally licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) so that the methodology can be cited and adapted in academic and industry work.
+---
+
+## Maintainer
+
+Built and maintained by **Dmitry Melnik** ([@Dmitrze](https://github.com/Dmitrze)).
+
+[**dmitrymelnik.ai**](https://dmitrymelnik.ai) — links to all channels (X, LinkedIn, contact).
 
 ---
 
 <div align="center">
 
 **Trust over hype.** **Explanations over scores.** **Free and open, forever.**
+
+⭐ **[Star this repo](https://github.com/Dmitrze/repo-trust)** if you find it useful — it genuinely helps with discoverability.
 
 </div>
