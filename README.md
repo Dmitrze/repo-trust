@@ -4,9 +4,10 @@
 
 **A command-line tool that tells you whether an open-source repository deserves your trust — beyond the star count.**
 
+[![CI](https://github.com/Dmitrze/repo-trust/actions/workflows/ci.yml/badge.svg)](https://github.com/Dmitrze/repo-trust/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Rust stable (1.75+)](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org/)
-[![Status: Pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange.svg)](#project-status)
+[![Version: v0.1.0](https://img.shields.io/badge/version-v0.1.0-blue.svg)](CHANGELOG.md)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Dmitrze/repo-trust/badge)](https://scorecard.dev/viewer/?uri=github.com/Dmitrze/repo-trust)
 

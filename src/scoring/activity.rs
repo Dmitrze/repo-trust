@@ -142,8 +142,7 @@ pub fn score(
                 })),
                 verdict: verdict_from_score(s),
                 rationale: format!(
-                    "Median first-response time across recent issues with comments is ~{:.1}h.",
-                    hours
+                    "Median first-response time across recent issues with comments is ~{hours:.1}h."
                 ),
             });
         } else {
@@ -423,7 +422,7 @@ mod tests {
         f.days_since_last_release = Some(200);
         let (_, ev) = score(&f, &ActivityThresholds::v1(), 365 * 2);
         let mut codes: Vec<&str> = ev.iter().map(|e| e.code.as_str()).collect();
-        codes.sort();
+        codes.sort_unstable();
         codes.dedup();
         assert_eq!(codes.len(), ev.len(), "evidence codes should be unique");
     }

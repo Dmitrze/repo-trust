@@ -1,3 +1,12 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! End-to-end scan integration: invokes the compiled binary against a
 //! wiremock server pointed at via `--api-base-url`.
 //!
@@ -7,7 +16,6 @@
 
 use assert_cmd::Command;
 use repo_trust::models::TrustReport;
-use serde_json;
 use tempfile::TempDir;
 use wiremock::matchers::{method, path, path_regex};
 use wiremock::{Mock, MockServer, ResponseTemplate};

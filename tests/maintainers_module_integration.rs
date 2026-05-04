@@ -1,8 +1,17 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! End-to-end integration test for `MaintainersModule::run` against a
 //! wiremock-backed GitHub fixture.
 //!
 //! Covers `tests/scenarios/maintainer-health-module.md`:
-//! - S-002 (solo-maintainer flagged but not HighRisk)
+//! - S-002 (solo-maintainer flagged but not `HighRisk`)
 //! - S-101 (bot commits excluded)
 //! - the multi-maintainer healthy case (S-001) lands as a Day-5 fixture
 

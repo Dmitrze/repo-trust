@@ -1,3 +1,11 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines
+)]
+
 //! Integration tests for `repo_trust::api::deps_dev::Client`.
 //!
 //! Covers `tests/scenarios/deps-dev-client.md`:

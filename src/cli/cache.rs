@@ -70,7 +70,7 @@ fn print_info(cache: &Cache, max_size_mb: u64) -> Result<()> {
     println!("  api_cache rows:  {}", info.api_rows);
     println!("  features rows:   {}", info.feature_rows);
     println!("  reports rows:    {}", info.report_rows);
-    println!("  soft cap:        {} MB", max_size_mb);
+    println!("  soft cap:        {max_size_mb} MB");
     Ok(())
 }
 

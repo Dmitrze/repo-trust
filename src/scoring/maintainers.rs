@@ -364,7 +364,7 @@ mod tests {
         }];
         let (_, ev) = score(&f, &MaintainerThresholds::v1(), 365 * 3);
         let mut codes: Vec<&str> = ev.iter().map(|e| e.code.as_str()).collect();
-        codes.sort();
+        codes.sort_unstable();
         codes.dedup();
         assert_eq!(codes.len(), ev.len(), "codes should be unique");
     }

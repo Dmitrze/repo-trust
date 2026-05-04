@@ -1,3 +1,12 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! Verifies `--format json,md,csv` dispatches to all three writers and
 //! produces all three files. Reuses the all-five-modules wiremock fixture
 //! pattern but pruned to the activity module so the fixture stays minimal.

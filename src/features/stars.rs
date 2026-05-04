@@ -215,7 +215,7 @@ pub fn matches_low_activity_profile(stargazer: &StargazerEntry, profile: &UserPr
 }
 
 fn non_empty(s: &Option<String>) -> bool {
-    s.as_deref().map(|x| !x.trim().is_empty()).unwrap_or(false)
+    s.as_deref().is_some_and(|x| !x.trim().is_empty())
 }
 
 /// Ecosystem multipliers per `module-specs.md` §Star Authenticity.
@@ -224,11 +224,11 @@ fn non_empty(s: &Option<String>) -> bool {
 #[must_use]
 pub fn ecosystem_multipliers(language: Option<&str>) -> (f64, f64) {
     match language {
-        Some("TypeScript") | Some("JavaScript") => (0.7, 0.8),
+        Some("TypeScript" | "JavaScript") => (0.7, 0.8),
         Some("Python") => (1.0, 1.0),
         Some("Go") => (1.1, 1.0),
         Some("Rust") => (0.9, 0.9),
-        Some("Java") | Some("Kotlin") => (1.0, 1.0),
+        Some("Java" | "Kotlin") => (1.0, 1.0),
         _ => (1.0, 1.0),
     }
 }

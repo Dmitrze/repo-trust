@@ -1,16 +1,34 @@
-# Dependabot is intentionally DISABLED during the pre-alpha (Phase 0/1).
-#
-# Why: on day one Dependabot opened 15 PRs because it found newer versions
-# of every crate pinned in Cargo.toml. That is correct behaviour, but it
-# is the wrong stage of the project \u2014 we don't yet have a working test
-# suite that can validate that those bumps don't break anything.
-#
-# Plan: re-enable Dependabot once Phase 1 ships (real scan, real test
-# fixtures, snapshot tests). At that point bumps are useful because the
-# tests catch real regressions.
-#
-# To re-enable: replace this file with the content from the previous
-# revision in git history (commit ab0ee38).
+# Dependabot — re-enabled for v0.1.0 per chore/ci-strict-gates (Day 5).
+# Phase 1 modules + tests can now validate dependency bumps.
 
 version: 2
-updates: []
+updates:
+  # Rust crates.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    groups:
+      tokio:
+        patterns:
+          - "tokio*"
+      tracing:
+        patterns:
+          - "tracing*"
+      serde:
+        patterns:
+          - "serde*"
+
+  # GitHub Actions.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3

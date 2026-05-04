@@ -194,7 +194,7 @@ impl Client {
                 serde_json::from_slice(&body).context("parse pulls page")?;
             let len = chunk.len();
             // Stop early if last item is older than `since`.
-            let crossed = chunk.last().map(|p| p.updated_at < since).unwrap_or(false);
+            let crossed = chunk.last().is_some_and(|p| p.updated_at < since);
             // Filter by since-cutoff before appending.
             chunk.retain(|p| p.updated_at >= since);
             all.append(&mut chunk);
@@ -227,7 +227,7 @@ impl Client {
         let mut all = Vec::new();
         let mut page = 1u32;
         let accept = "application/vnd.github.star+json";
-        let max_pages = ((max + 99) / 100).clamp(1, MAX_PAGES as usize) as u32;
+        let max_pages = max.div_ceil(100).clamp(1, MAX_PAGES as usize) as u32;
         loop {
             let key = format!("github:repos:{owner}/{repo}:stargazers:p{page}");
             let path = format!("/repos/{owner}/{repo}/stargazers?per_page=100&page={page}");

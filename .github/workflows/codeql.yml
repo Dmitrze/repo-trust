@@ -1,39 +1,41 @@
 name: CodeQL
 
-# Disabled on every push during pre-alpha. CodeQL on a skeleton crate
-# produces no useful signal. Run manually via the Actions tab when
-# we want a SAST snapshot.
-#
-# Re-enable scheduled runs once Phase 1 ships and there is real code
-# to analyse.
+# GitHub native static analysis for Rust. Runs on every PR and push to
+# main, plus a weekly Sunday cron for advisory database refreshes.
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Sunday 02:00 UTC.
+    - cron: '0 2 * * 0'
 
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
-    timeout-minutes: 360
     permissions:
-      security-events: write
-      packages: read
       actions: read
       contents: read
+      security-events: write
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [rust]
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
-          languages: rust
-
+          languages: ${{ matrix.language }}
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
-
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:rust"
+          category: "/language:${{ matrix.language }}"

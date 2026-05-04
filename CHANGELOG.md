@@ -6,73 +6,82 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 The **scoring model** has its own SemVer separate from the CLI version. See [`docs/scoring-model.md`](docs/scoring-model.md) for the scoring change log.
 
-## [Unreleased]
+## [0.1.0] — 2026-05-04
+
+Initial public release. Five-module trust framework end-to-end against the live GitHub API.
 
 ### Added
-- Star Authenticity — Heuristic 2 (lockstep timing z-score) lands; module reaches its full v1.0 form. `lockstep_z_score` computed over the daily star series with a 28-day rolling baseline lagged 7 days; bands `<3 → 100, 3-5 → 85, 5-8 → 60, 8-12 → 30, >12 → 10` per `methodology.md` §Heuristic 2. Final formula reverts to the methodology v1 weights `0.55 × H1 + 0.30 × H2 + 0.15 × H3`; falls back to `0.55 × H1 + 0.45 × H3` when H2 is `None`. New `combined_low_activity_and_lockstep` Concerning evidence emitted when both H1 ≥ 20% AND H2 ≥ 5. New `recency_biased_sample` Neutral evidence on every non-below-floor run (Day-3 architect Q1 follow-through). `specs/star-authenticity-module-shallow.md` §9 amended with recency-bias caveat. 6 new features unit tests + 6 new scorer unit tests.
-- Localhost web viewer (`repo-trust serve`) under the `web` feature: `axum` 0.7 router with `GET /` (cached-reports index, newest-first), `GET /reports/{owner}/{name}` (askama-rendered module cards + evidence + caveats), `GET /api/reports/{owner}/{name}` (raw cached JSON byte-for-byte), `POST /scans` (re-scan via `cli::scan::execute`, gated behind `--allow-scan` and 405 otherwise to mitigate DNS-rebinding browser attacks per `architecture.md` §12), `GET /static/*path` (CSS embedded via `rust_embed`). Templates compile-time via `askama` (`base.html` / `index.html` / `report.html` / `not_found.html` in `src/web/templates/`, configured via `askama.toml`). Light/dark CSS in `src/web/static/style.css` (≤200 lines, no JS). New `Cache::list_all_reports()` returns one summary row per `(repo, mode, scoring_ver)` ordered newest-first. `ServeArgs` flags: `--bind` (default `127.0.0.1:8765`) and `--allow-scan` (off by default). Graceful shutdown on SIGINT/SIGTERM. 12 new tests covering scenarios S-001/S-002/S-101/S-102/S-103/S-502.
-- Foundation documents: PRD, architecture, methodology plan
-- Apache-2.0 license; methodology docs additionally under CC-BY-4.0
-- Code of Conduct (Contributor Covenant 2.1)
-- Contributing guide, security policy, support policy
-- Repository structure for Rust CLI implementation
-- Five-module trust framework definition: Star Authenticity, Activity Health, Maintainer Health, Adoption Signals, Security & Readiness
-- Federation strategy with OpenSSF Scorecard, deps.dev, OSV (consume, do not replicate)
-- ADR-0011: TrustModule trait shipped object-safe `run()` shape (locks the v1 trait surface).
-- Spec-first scaffolding: `specs/{cache-layer,config-loader,github-api-client,activity-health-module}.md` with paired `tests/scenarios/`.
-- Storage layer: r2d2-pooled SQLite cache (`src/storage/cache.rs`), schema migrations via `rusqlite_migration` (`src/storage/migrations/0001_initial.sql`), 0600 file perms on Unix, `Cache` handle threaded into `RepositoryContext`.
-- Layered configuration via `figment`: embedded `src/config/default.toml` + user file (`~/.repo-trust/config.toml`) + project file (`./.repo-trust.toml`) + `REPO_TRUST_*` env + CLI overrides; `Config` typed structs with `WeightsConfig::into() → ModuleWeights`, tilde expansion in cache path, `GithubConfig::resolve_token()` reading the configured env var.
-- GitHub REST client (`src/api/github.rs`): ETag-aware `fetch_json` lifecycle (cache hit → 304 revalidate → 200 store-new), per-endpoint TTLs from architecture §6.3, typed errors mapped to architecture §8 exit codes. Methods: `get_repo`, `list_commits` (windowed + paginated), `list_releases`, `list_issues_since` (filters out PRs), `list_pulls` (paginated with since-cutoff), `list_contributors`, `list_stargazers` (with `vnd.github.star+json` for star dates), `file_exists` (200/404 for doc-presence checks).
-- `src/utils/ratelimit.rs`: `RateLimiter` with `tokio::sync::Semaphore` (default 10 permits) + `X-RateLimit-Remaining` / `X-RateLimit-Reset` tracking; warns at <100, pauses until reset at <10.
-- Activity Health module (`src/modules/activity.rs`) end-to-end: collector pulls 18-month commit window plus releases, recent issues, recent PRs through the cached GitHub client; features layer normalizes to `ActivityFeatures` with `Option<u64>` for last-commit/last-release timestamps; scorer (`src/scoring/activity.rs`) emits ≥3 evidence items and arithmetic-mean sub-scores per `methodology.md` §Module 2. Threshold table in `src/scoring/thresholds.rs` (`ActivityThresholds::v1`) plus generic `linear_lower_better` / `linear_higher_better` helpers covered by 8 unit tests. 11 scorer tests + 3 features tests + 1 wiremock integration test against a minimal `octocat/Hello-World` fixture.
-- `RepositoryContext` carries `github: GithubClient` alongside `cache: Cache`; new `owner_repo()` helper splits `full_name`.
-- `cli::scan::execute` partial wire (Day 1): repo-URL parsing → config load → cache open → GitHub client construction → run modules → aggregate → write JSON report into `--output` dir + cache the report. Only Activity Health is wired end-to-end this day; remaining modules land Day 2/3. Hidden `--api-base-url` flag (also `REPO_TRUST_API_BASE_URL`) lets integration tests point at wiremock. End-to-end CLI test (`tests/scan_cli_integration.rs`) confirms the binary writes a parseable `TrustReport`.
-- scorecard.dev REST client (`src/api/scorecard.rs`): ETag-aware `fetch_json` lifecycle reusing the existing `storage::Cache`, 7-day TTL per `architecture.md` §6.3, typed `ScorecardError::Other` for non-200/304/404 responses, and `Client::get` returning `Ok(None)` for the "not yet scored" 404 signal. DTOs (`ScorecardReport`, `ScorecardRepoRef`, `CheckResult`) cover the fields the Security & Readiness module needs. Re-exported as `repo_trust::api::ScorecardClient`. 5 wiremock integration tests (`tests/scorecard_client_integration.rs`) cover scenarios S-001/S-101/S-102/S-201/S-202 from `tests/scenarios/scorecard-client.md`.
-- OSV.dev federated query client (`src/api/osv.rs`): `Client::query(PackageCoords)` over `POST /v1/query` with cache-key `osv:{ecosystem}:{name}:{version}` and 6h TTL per architecture §6.3; client-side filter for withdrawn advisories and stable sort by `id` for determinism. Typed `OsvError::Other { status, body }` for 5xx upstream failures. DTOs (`OsvAdvisory`, `Severity`, `Affected`, `PackageRef`) match the public OSV-schema fields the Security module needs. Five wiremock integration tests in `tests/osv_client_integration.rs` cover S-001 (empty response), S-002 (withdrawn-filter), S-101 (deterministic sort), S-102 (cache hit serves without network), S-201 (503 → Err). Wired into `api::OsvClient` re-export. Day 3 connects this client to the Security collector once Adoption supplies the repo→packages map.
-- ADR-0012: documents the layering exception that puts runtime handles (`Cache`, `GithubClient`, future Scorecard / OSV / deps.dev clients) on `RepositoryContext`. `architecture.md` §1 patched accordingly. Forward path: split into `runtime::RunContext` if a second consumer of `models` ever appears.
-- `chore`: removed unused `octocrab` dependency (-19 transitive crates) and patched `CLAUDE.md` §4 to reflect the direct-`reqwest` GitHub client + add the small leaf crates (`url`, `semver`, `dirs`).
-- Maintainer Health module (`src/modules/maintainers.rs`) end-to-end: collector pulls 18-month commit window (cache-shared with Activity), contributors summary, and probes for `CODEOWNERS` (4 paths), `MAINTAINERS.md`, `GOVERNANCE.md` (3 paths) concurrently via `try_join_all`. Features layer: bot filter (`type=Bot` + `[bot]` suffix + `*-bot` + known names) → 365d commits-by-author map → Gini coefficient + bus-factor proxy + retention rate (cross-180d-window overlap) + top 5 human authors. Scorer (`src/scoring/maintainers.rs`): 4 sub-scores (`bus_factor_proxy`, `commit_concentration`, `contributor_retention`, `governance_docs`) per `methodology.md` §Module 3. Solo-maintainer is `Concerning` evidence, never `HighRisk` standalone (per `module-specs.md`). 11 scorer tests + 13 features tests + 6 proptest invariants on Gini/bus-factor + 1 wiremock integration test (bot-filter S-101 + solo-maintainer S-002).
-- `MaintainerThresholds::v1()` added to `src/scoring/thresholds.rs` (bus-factor full credit at 5, Gini full-credit/zero at 0.40/0.85, retention full-credit/zero at 0.50/0.10).
-- Security & Readiness module (`src/modules/security.rs`) end-to-end: collector federates Scorecard via `api::scorecard::Client`, runs doc-presence probes (SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, LICENSE family, CODEOWNERS at 4 paths) and CI-workflow probes concurrently via `tokio::join!`/`try_join_all`. Features layer extracts `scorecard_score`, `scorecard_age_days`, `scorecard_checks_failed` (score < 5), and `semver_consistent` (every release tag must be `vX.Y.Z` or `X.Y.Z`). Scorer applies the federation policy from `methodology.md` §Module 5 (Scorecard ≤30d → weight 0.40 + High; 30-90d → 0.30 + Medium; >90d/absent → ignored + Low). 12 scorer tests + 4 features tests + 2 wiremock integration tests (S-001 fresh Scorecard + S-002 404 fallback). Day 2 keeps OSV deferred to Day 3 (zero advisories with `osv_deferred_to_phase_3` caveat).
-- `RepositoryContext` carries `scorecard: ScorecardClient` + `osv: OsvClient` alongside the GitHub client (per ADR-0012).
-- `cli::scan::execute` now wires the **3-module Day-2 default set** (Activity + Maintainers + Security); CLI tests pass `--modules` explicitly to scope wiremock fixture surface.
-- Exit-code mapping wired in `cli::run`: `scan::execute` errors get downcast to `GithubError` and mapped per `architecture.md` §8 (404 → 2, 401 → 3, 403/rate-limit → 4); 2 integration tests (`tests/exit_codes.rs`) assert 401 → 3 and 403 → 4 against wiremock.
-- `tests/aggregate_determinism.rs`: runs the full 3-module scan twice against the same wiremock fixture and asserts byte-identical JSON modulo `snapshot_at` + `runtime_seconds` (ADR-0007 enforcement at the integration level).
-- deps.dev v3 federated client (`src/api/deps_dev.rs`): `Client::project_packages(owner, repo)` over `GET /v3/projects/github.com/{owner}/{repo}/packages` and `Client::package(system, name)` over `GET /v3/systems/{system}/packages/{name}`. ETag-aware `fetch_json` lifecycle on the existing `storage::Cache`, 24h TTL per architecture §6.3, cache keys `deps_dev:projects:{owner}/{repo}:packages` and `deps_dev:systems:{system}:{name}`. Typed `DepsDevError::{NotFound, Other}`; the project endpoint swallows 404 → `Ok(Vec::new())` (no packages mapped is a normal Adoption signal), the package endpoint propagates `NotFound`. DTOs: `PackageRef { system, name }` (sorts lexicographically for deterministic output) and `PackageInfo { system, name, weekly_downloads: Option<u64>, latest_version: Option<String> }` with a custom `deserialize_string_to_u64_option` deserializer for deps.dev's string-typed `weeklyDownloads`. Re-exported as `repo_trust::api::DepsDevClient`. Five wiremock integration tests in `tests/deps_dev_client_integration.rs` cover scenarios S-001 / S-002 / S-101 / S-102 / S-201 from `tests/scenarios/deps-dev-client.md`, plus six in-module unit tests for the custom deserializer and `PackageRef` ordering.
-- Adoption Signals module (`src/modules/adoption.rs`) end-to-end: collector federates deps.dev for project→packages mapping and per-package weekly downloads (graceful 5xx handling — `deps_dev_error: true` rather than abort), GitHub `/readme` endpoint with base64-decoding and word-count, and `docs/` + `examples/` directory probes via `tokio::try_join!`. Features layer (`src/features/adoption.rs`) sums weekly downloads across packages (`Option<u64>` to drop the sub-score on missing data), de-duplicates package systems via `BTreeSet`, and computes a `documentation_maturity_score` in `[0.0, 1.0]` with per-component weights (README band 0.20–0.50, docs 0.30, examples 0.20). Scorer (`src/scoring/adoption.rs`) emits four sub-scores (`weekly_downloads` logarithmic banding 0/25/50/75/100, `documentation_maturity`, `package_systems_count`, `awesome_list_mentions`), arithmetic-mean aggregation, and federation caveats (`no_packages` → Medium, `deps_dev_unavailable` → Low, `archived` → Low — all Neutral verdicts per `methodology.md` §Module 4 conservative posture). Missing README is the *only* Concerning verdict the module emits. 16 scorer tests + 6 features tests + 2 wiremock integration tests (well-documented happy path + no-packages fallback covering S-101 + S-201).
-- `AdoptionThresholds::v1()` added to `src/scoring/thresholds.rs` (download bands at 1k/10k/100k/1M; README word-count breakpoints at 100/500; High-confidence downloads floor at 10k).
-- `src/api/github.rs::Client::get_readme` — fetches `/repos/{owner}/{repo}/readme` and base64-decodes the body via a small in-tree decoder (no new runtime crate dep). Returns `Ok(None)` on 404. 4 unit tests cover decode + whitespace + no-padding + invalid-char paths.
-- `RepositoryContext` carries `deps_dev: DepsDevClient` alongside the other federated clients (per ADR-0012); `cli::scan::execute` constructs the client and wires `--api-base-url` overrides.
 
-- Star Authenticity module — shallow Day-3 cut (`src/modules/stars.rs`): collector pulls `Repository` + N stargazers (Quick=0 / Standard=200 / Deep=2000) + per-stargazer profile via new `github::Client::get_user`. Features layer applies the 9-signal low-activity composite per `methodology.md` §Module 1 Heuristic 1 (created_at >2022-01-01, ≤1 follower/following, 0 gists, ≤4 repos, empty bio/blog/email, starred_at == created_at when available) plus fork/star + watcher/star ratios with ecosystem multipliers per `module-specs.md` §Star Authenticity (TS/JS 0.7/0.8, Go 1.1/1.0, Rust 0.9/0.9, etc.). Scorer (`src/scoring/stars.rs`): 6-band table for low-activity-share + linear ratio mapping. **Day-3 formula**: `0.55 × H1 + 0.45 × H3` (lockstep H2 weight redistributed to H3 until Day 4). 5pp leniency on low-activity threshold for repos < 6 months old. Below-floor short-circuit for repos < 50 stars (Low confidence + below_sampling_floor). Verdict ceiling = `Concerning` — never `HighRisk` standalone for Heuristic 1. Probabilistic phrasing only — `"fake"` / `"fraud"` / `"bot"` forbidden. 11 scorer tests + 8 features tests + 1 explicit-language-posture test.
-- `StarsThresholds::v1()` added to `src/scoring/thresholds.rs` (6-band low-activity table, healthy 0.04 fork / 0.005 watcher ratios, sample 100/30 for High/Medium confidence).
-- `github::Client::get_user(login) -> UserProfile` added (24h TTL, `github:users:{login}` cache key).
-- `cli::scan::execute` now wires the **5-module Day-3 default set** (Stars + Activity + Maintainers + Adoption + Security); `select_modules()` default expanded. `tests/all_five_modules_integration.rs` invokes the compiled binary against a single wiremock fixture, verifies all 5 module results land in the JSON, asserts ≥3 evidence items per module, and a valid Category bucket on the aggregate.
-- Markdown report writer (`src/reports/markdown_report.rs::write`): self-contained GitHub-flavored markdown render of a `TrustReport` for embedding in PR bodies / issues / mdBook. Header summary table (7 rows), one `## {Title} (\`{module}\`)` section per module preserving registry order (no alphabetisation), sub-scores table sorted by `BTreeMap` key, evidence table with `\|`-escaped cell content per S-101, optional `*Missing data:*` footer, "Top Strengths" + (conditional) "Top Concerns" sections (S-102 omits the header entirely on empty), optional "Caveats" section, and a methodology footer linking the configured `scoring_version`. Plain `writeln!` formatting — no markdown-builder runtime dep per spec §2. 7 unit tests in-module + 1 insta snapshot.
+#### Five trust modules (full pipelines)
+- **Star Authenticity** — Heuristic 1 (9-signal low-activity profile share, 6-band table) + Heuristic 2 (lockstep timing z-score, 28-day rolling baseline lagged 7d) + Heuristic 3 (fork/watcher ratios with ecosystem multipliers). Final formula: `0.55 × H1 + 0.30 × H2 + 0.15 × H3` per `methodology.md` §Module 1 v1.0. Verdict ceiling stays `Concerning` even when combined H1+H2 evidence is emitted — never `HighRisk` standalone. Probabilistic phrasing only (`fake` / `fraud` / `bot` forbidden in evidence rationale, test-enforced). 5pp leniency on low-activity threshold for repos < 6 months old. Below-floor short-circuit for repos < 50 stars.
+- **Activity Health** — collector pulls 18-month commit window plus releases / recent issues / recent PRs through the cached GitHub client; arithmetic-mean of 5 sub-scores per `methodology.md` §Module 2 v1.0.
+- **Maintainer Health** — Gini coefficient on commits-by-author + bus-factor proxy + retention rate (cross-180d-window overlap) + governance-doc presence (CODEOWNERS at 4 paths, MAINTAINERS.md, GOVERNANCE.md). Bot filter (`type=Bot` + `[bot]` suffix + `*-bot` + known names). Solo-maintainer is `Concerning` evidence, never `HighRisk` standalone (per `module-specs.md`).
+- **Adoption Signals** — federates deps.dev for repo→packages mapping + per-package weekly downloads. GitHub README maturity (presence + word count) + `docs/` + `examples/` directory probes. Logarithmic download bands (1k→25, 10k→50, 100k→75, 1M→100). Conservative posture: no published package = `Medium` confidence + `no_packages` Neutral caveat (NEVER `Concerning`).
+- **Security & Readiness** — federates Scorecard (Scorecard ≤30d → weight 0.40 + High; 30-90d → 0.30 + Medium; >90d/absent → 0.0 + Low) + concurrent doc-presence probes (SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, LICENSE family, CODEOWNERS) + CI workflow probes + semver-tag consistency. OSV wired but not invoked in v0.1.0 — per-package OSV lands when v0.2.0 makes the deps.dev mapping authoritative.
 
-- Terminal report writer (`src/reports/terminal.rs::write`) end-to-end per `specs/reports-terminal.md`: 3-line header, 5-column `comfy_table` with `UTF8_BORDERS_ONLY` preset, Top strengths + Top concerns sections, optional Caveats section. Color palette per spec §2 (Strong=green, Good=cyan, Mixed=yellow, Weak=Color256(214), HighRisk=red); Confidence Low=dim/Medium=normal/High=bold. `color: bool` parameter forces `console::Style::force_styling(false)` for piped output. 11 unit tests + 1 insta snapshot.
+#### CLI surface
+- `repo-trust scan` — full 5-module scan + aggregate + per-format writers. Mode-derived sample budgets (Quick / Standard / Deep). `--mode` / `--modules` / `--skip-modules` / `--output` / `--format` / `--weights` / `--scoring-version` / `--token` (also `GITHUB_TOKEN`) / `--seed` / `--refresh` / `--refresh-module` / `--debug` / `--quiet` / `--no-color` / `--json` / `--api-base-url` (hidden — wiremock). `--snapshot-at` (hidden — pinned timestamp for snapshot tests).
+- `repo-trust serve` (web feature) — axum app on `127.0.0.1:8765` (default). Routes: `GET /` (cached-reports index, newest-first), `GET /reports/{owner}/{name}` (askama-rendered module cards + evidence), `GET /api/reports/{owner}/{name}` (raw cached JSON byte-for-byte), `POST /scans` (gated behind `--allow-scan` for DNS-rebinding mitigation; 405 otherwise), `GET /static/*` (CSS embedded via `rust-embed`). Single-binary preserved.
+- `repo-trust cache info|clear|prune` — cache file path + size + per-table row counts + soft cap. `clear` defaults to api_cache; `--repo` scopes; `--all` also clears features + reports. `prune` removes expired rows.
+- `repo-trust completions <shell>` — generated shell completions.
+- `repo-trust version` — version + scoring-model version.
 
-- CSV report writer (`src/reports/csv_report.rs`) per `specs/reports-csv.md`: `write_header` + `write_row` + `write`. Fixed 21-column order pinned in the public `COLUMNS` constant; missing modules emit empty cells without disturbing column count. RFC 4180-ish quoting. No new runtime crates — `csv = "1.3"` added to `[dev-dependencies]` only. 11 unit tests + 1 insta snapshot.
-- Cache CLI subcommands (`repo-trust cache info|clear|prune`) per `specs/cache-subcommands.md`. Replaces the Day-0 `bail!()` stub. `info` prints the cache file path, on-disk size (B/KB/MB/GB), per-table row counts, and configured soft cap. `clear` removes `api_cache` rows by default; `--repo {owner/name}` scopes to one repo (reuses `Cache::delete_by_repo`); `--all` also clears `features` and `reports`. `prune` removes `api_cache` rows whose `expires_at` is in the past. New `Cache::clear_api_cache`, `Cache::clear_all`, `Cache::prune_expired` methods on the storage facade. 1 unit test for `human_bytes` + 3 unit tests for the new cache methods + 5 integration tests in `tests/cache_subcommands_integration.rs` exercising the compiled binary.
-- `cli::scan::execute` `--format` dispatch: multi-select format flag now wires to the real writers (`json`, `md`, `csv`, `terminal`); SARIF still warns and skips per architecture §3 (v1.1). Default-format precedence: `--json` → `[Json]` → explicit `--format` → `[output] default_formats` from config → fallback `[Json]`. Terminal renders to `stdout` (suppressed under `--quiet`); file writers emit `{owner_repo}.{ext}` into `--output`. New `tests/scan_format_dispatch.rs` integration test runs the compiled binary with `--format json,md,csv` against a wiremock fixture and asserts all three files exist with correct shapes.
+#### Output formats
+- **Terminal** (default unless `--quiet`) — comfy-table + console color (Strong=green, Good=cyan, Mixed=yellow, Weak=orange, HighRisk=red); ANSI suppression when piped.
+- **JSON** — frozen schema (`REPORT_SCHEMA_VERSION = 1.0.0`). Deterministic per ADR-0007.
+- **Markdown** — long-form GFM with module sections + evidence tables + methodology footer. No new runtime dep (plain `writeln!`).
+- **CSV** — fixed 21-column row per repo for batch + spreadsheet import. RFC-4180-ish quoting.
+- **SARIF** — placeholder (Format::Sarif arm warns + skips); v0.2.0 work.
 
-### Notes
-- Pre-alpha. APIs and outputs will change before `v1.0.0`. Do not depend on this in production.
+#### Architecture & rigor
+- **Determinism** (ADR-0007) — same inputs + same upstream API state ⇒ byte-identical JSON modulo `snapshot_at` + `runtime_seconds`. Enforced by `tests/aggregate_determinism.rs` (full 3-module scan twice against same fixture) + 3 `tests/snapshots_three_fixtures.rs` snapshot tests (octocat/Hello-World, prometheus/prometheus, rust-lang/cargo).
+- **Federation** (ADR-0005) — Scorecard, deps.dev, OSV consumed via thin clients with ETag-aware caching; no replication.
+- **No `unsafe` code** (`#![deny(unsafe_code)]`).
+- **Property-based tests** — 5 invariants on `scoring::aggregate` (bounded, deterministic, monotonic, confidence-demotion preserves bands) + Maintainer Gini bounds, 256 cases each (1 280+ total generated cases).
+- **Snapshot tests** — 3 reference repos, deterministic via the new `--snapshot-at` flag.
+
+#### Storage & infra
+- r2d2-pooled SQLite cache (`api_cache` + `features` + `reports` tables) with ETag CRUD, 0600 perms on Unix.
+- Layered `figment` config (defaults → `~/.repo-trust/config.toml` → `./.repo-trust.toml` → `REPO_TRUST_*` env → CLI flags).
+- `RateLimiter` over `tokio::sync::Semaphore` with `X-RateLimit-Remaining` / `X-RateLimit-Reset` tracking; warns at <100, pauses until reset at <10.
+- Architecture §8 exit-code mapping wired in `cli::run` (404→2, 401→3, 403→4).
+
+#### Quality gates
+- `cargo build --all-features --all-targets` clean (default + `--no-default-features` matrix entries).
+- `cargo test --all-features` — 274 tests passing.
+- `cargo fmt --all -- --check` clean.
+- `cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic` clean (cast_* family + ~15 other lints scoped-allowed in `src/lib.rs` with rationale).
+- `cargo deny check` (license + bans + advisories + sources per `deny.toml`).
+- `cargo audit` (RustSec advisory DB).
+- `cargo tarpaulin` coverage ≥ 75%.
+- `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features` clean.
+- OpenSSF Scorecard self-application (weekly + on-push).
+- CodeQL static analysis (PR + weekly).
+- Dependabot grouped updates for tokio / tracing / serde.
+
+#### Documentation
+- `README.md` with badges, install, quick-start, methodology link.
+- `docs/PRD.md`, `docs/architecture.md`, `docs/methodology.md`, `docs/module-specs.md`, `docs/api-notes.md`, `docs/scoring-model.md`, `docs/governance.md`, `docs/benchmark-plan.md`.
+- 12 ADRs (`docs/adr/0001` through `0012`) covering language choice, CLI framework, cache choice, no-ML-in-v1, federate-don't-replicate, five-modules, deterministic-output, confidence-separate-from-score, license, plugin-deferral, trait-shape, runtime-handles-on-context.
+- `docs/benchmarks/v1.0.0.md` template + `scripts/run-benchmarks.sh` + `examples/benchmark-set.csv` (10 reference repos) — owner runs sweep post-launch with `$GITHUB_TOKEN`.
+
+### Calibration
+
+The following defaults are shipped as documented in `docs/methodology.md` v1.0; post-launch benchmark sweep (`scripts/run-benchmarks.sh`) informs whether v0.1.1 should recalibrate:
+
+- **Security federation policy**: `0.40` / `0.30` interpreted as **absolute** weights against the fixed-pool of `docs (2.0) + ci (1.0) + semver (0.5) + osv (0.5)`. Scorecard fresh contributes ≈ 50% of the final module score.
+- **Adoption download bands**: logarithmic (1k → 25, 10k → 50, 100k → 75, 1M → 100).
+- **Stars lockstep z-score bands**: methodology v1 (`<3 → 100, 3-5 → 85, 5-8 → 60, 8-12 → 30, >12 → 10`). Combined H1+H2 condition (both ≥ 20% AND z ≥ 5) is the more reliable signal than H2 alone.
+
+### Notes for v0.1.x follow-up
+
+Tracked in GitHub issues post-launch:
+- Maintainer / Security / Adoption / Stars / Web viewer wiremock test gap closures (currently covered by unit tests + 3 snapshot fixtures + at least 1 wiremock integration per module).
+- Async `POST /scans` with job queue + polling (current synchronous behavior is fine for "developer-laptop" use case per `architecture.md` §12).
+- True uniform random stargazer sampling (current Day-3/4 sample is recency-biased; deferred to Phase 2 deep mode).
+- SARIF report writer.
+- v1.1 LRU cache eviction; cache size cap enforcement.
 
 ---
 
-## [0.1.0] — TBD
-
-The initial release will include:
-- CLI skeleton (`scan`, `batch`, `explain`, `serve`, `cache`, `config`, `version`)
-- Activity Health module
-- Maintainer Health module
-- Security & Readiness module (federating OpenSSF Scorecard)
-- JSON and Markdown report writers
-- SQLite-backed local cache with ETag-aware fetching
-- Quick and Standard execution modes
-
-The Star Authenticity, Adoption Signals, and Deep mode features are planned for `0.2.0` and beyond.
-
-[Unreleased]: https://github.com/Dmitrze/repo-trust/compare/HEAD
 [0.1.0]: https://github.com/Dmitrze/repo-trust/releases/tag/v0.1.0

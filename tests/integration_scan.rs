@@ -1,3 +1,12 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines,
+    dead_code
+)]
+
 //! End-to-end integration tests for the `repo-trust` binary.
 //!
 //! These tests use `assert_cmd` to invoke the compiled binary and check

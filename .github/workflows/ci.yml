@@ -1,23 +1,16 @@
 name: CI
 
-# Pre-alpha CI: lite gates only.
-#
-# We deliberately do NOT enforce -D warnings, pedantic clippy, coverage,
-# cargo-deny, or cargo-audit at this stage. The crate is a typed skeleton
-# whose modules return Err("not yet implemented"); strict lint gates
-# produce noise, not signal.
-#
-# Re-enable strict gates progressively as Phase 1 modules land:
-#   - Phase 1: enable -D warnings + pedantic clippy on real code.
-#   - Phase 2: enable coverage gate (>=70% overall).
-#   - Phase 2: enable cargo-deny and cargo-audit.
-#   - v1.0:    enable rustdoc -D warnings.
+# v0.1.0 strict CI gates per chore/ci-strict-gates (Day 5).
+# Enforces: rustfmt, build matrix (default + --no-default-features),
+# test matrix, pedantic clippy + -D warnings, cargo-deny, cargo-audit,
+# tarpaulin coverage ≥75%, rustdoc -D warnings. Triggers on every PR
+# regardless of base branch (stacked PRs get full CI checks).
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 concurrency:
@@ -45,13 +38,16 @@ jobs:
         run: cargo fmt --all -- --check
 
   build:
-    name: build (${{ matrix.os }})
+    name: build (${{ matrix.os }} / ${{ matrix.features }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        features:
+          - "--all-features"
+          - "--no-default-features"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,9 +56,93 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}-${{ matrix.features }}
       - name: cargo check
-        run: cargo check --all-features
+        run: cargo check ${{ matrix.features }}
       - name: cargo build
-        run: cargo build --all-features
+        run: cargo build ${{ matrix.features }}
       - name: cargo test
-        run: cargo test --all-features
+        run: cargo test ${{ matrix.features }}
+
+  clippy:
+    name: clippy (pedantic, -D warnings)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic
+
+  rustdoc:
+    name: rustdoc (-D warnings)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: cargo doc
+        run: cargo doc --no-deps --all-features --document-private-items
+
+  deny:
+    name: cargo-deny (licenses, bans, advisories, sources)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+
+  audit:
+    name: cargo-audit (RustSec advisories)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install cargo-audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  coverage:
+    name: tarpaulin (coverage ≥75%)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin --locked
+      - name: cargo tarpaulin
+        run: cargo tarpaulin --workspace --all-features --ignore-tests --fail-under 75 --out Xml
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: cobertura.xml

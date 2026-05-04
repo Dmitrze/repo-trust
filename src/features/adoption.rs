@@ -116,14 +116,14 @@ pub fn doc_maturity(
     has_docs_dir: bool,
     has_examples_dir: bool,
 ) -> f64 {
-    let readme: f64 = if !has_readme {
-        0.0
-    } else {
+    let readme: f64 = if has_readme {
         match word_count.unwrap_or(0) {
             n if n >= 500 => 0.50,
             n if n >= 100 => 0.35,
             _ => 0.20,
         }
+    } else {
+        0.0
     };
     let docs: f64 = if has_docs_dir { 0.30 } else { 0.0 };
     let examples: f64 = if has_examples_dir { 0.20 } else { 0.0 };

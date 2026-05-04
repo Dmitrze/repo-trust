@@ -75,15 +75,14 @@ pub fn compute(raw: &ActivityRawData, now: OffsetDateTime) -> ActivityFeatures {
         .filter(|r| {
             r.published_at
                 .or(Some(r.created_at))
-                .map(|t| t >= commits_365d_cutoff)
-                .unwrap_or(false)
+                .is_some_and(|t| t >= commits_365d_cutoff)
         })
         .count() as u64;
 
-    let median_issue_first_response_hours = if !raw.issues_enabled {
-        None
-    } else {
+    let median_issue_first_response_hours = if raw.issues_enabled {
         median_issue_first_response_hours(&raw.issues_90d)
+    } else {
+        None
     };
 
     let median_pr_review_hours = median_pr_review_hours(&raw.prs_90d);
@@ -116,10 +115,7 @@ fn count_commits_after(commits: &[CommitMeta], cutoff: OffsetDateTime) -> u64 {
         .count() as u64
 }
 
-fn unique_contributors_after<'a>(
-    commits: &'a [CommitMeta],
-    cutoff: OffsetDateTime,
-) -> HashSet<&'a str> {
+fn unique_contributors_after(commits: &[CommitMeta], cutoff: OffsetDateTime) -> HashSet<&str> {
     commits
         .iter()
         .filter(|c| c.commit.author.date >= cutoff)
@@ -173,7 +169,7 @@ fn median(values: &mut [f64]) -> Option<f64> {
 
 /// Population variance of monthly commit counts over the 18-month window.
 fn monthly_variance(commits: &[CommitMeta], now: OffsetDateTime) -> f64 {
-    let mut buckets = vec![0u64; 18];
+    let mut buckets = [0u64; 18];
     for c in commits {
         let age_days = (now - c.commit.author.date).whole_days().max(0);
         let month = (age_days / 30) as usize;

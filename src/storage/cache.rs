@@ -239,7 +239,7 @@ impl Cache {
         let api_rows = count(&conn, "api_cache")?;
         let feature_rows = count(&conn, "features")?;
         let report_rows = count(&conn, "reports")?;
-        let bytes_on_disk = std::fs::metadata(&self.path).map(|m| m.len()).unwrap_or(0);
+        let bytes_on_disk = std::fs::metadata(&self.path).map_or(0, |m| m.len());
         Ok(CacheInfo {
             path: self.path.clone(),
             api_rows,

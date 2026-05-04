@@ -1,44 +1,11 @@
-# Curated benchmark set — see docs/benchmark-plan.md for selection criteria.
-# Format: repo,expected_category,rationale
-# Lines beginning with # are ignored. Add a one-line rationale per repo.
-
-# === Strong (12) ============================================================
-rust-lang/rust,Strong,Multi-maintainer flagship language; signed releases; mature governance
-tokio-rs/tokio,Strong,Heavily-used async runtime; multi-maintainer; high adoption
-kubernetes/kubernetes,Strong,Industry-standard orchestrator; large maintainer base
-facebook/react,Strong,Widely adopted UI library; large team; signed releases
-vercel/next.js,Strong,Mature framework; multi-maintainer
-django/django,Strong,Long-standing web framework; broad governance
-numpy/numpy,Strong,Scientific Python foundation; multi-maintainer
-golang/go,Strong,Language project; mature governance
-curl/curl,Strong,Decades-stable; well-known maintainer; clear policies
-openssh/openssh-portable,Strong,Critical infrastructure; conservative engineering
-sqlite/sqlite,Strong,Mission-critical embedded DB; rigorous testing
-LinusTorvalds/linux,Strong,Kernel; widest contributor base
-
-# === Good (12) ==============================================================
-clap-rs/clap,Good,Healthy CLI library; small but engaged maintainer team
-seanmonstar/reqwest,Good,Active HTTP client; primary maintainer + contributors
-dtolnay/serde,Good,Highly-used library; mostly solo with ecosystem help
-async-graphql/async-graphql,Good,Active GraphQL server; healthy contributor pool
-rayon-rs/rayon,Good,Stable parallelism library; small maintainer team
-launchbadge/sqlx,Good,Active async SQL; multi-maintainer
-wasmtime-dev/wasmtime,Good,Mature WASM runtime; multi-maintainer
-solana-labs/solana,Good,Active project with funding
-mpv-player/mpv,Good,Long-running player; small maintainer team
-gitea/gitea,Good,Active fork; multiple maintainers
-rust-lang/cargo,Good,Tooling project; small maintainer team
-huggingface/transformers,Good,Active ML library; multi-maintainer
-
-# === Mixed (12) =============================================================
-# Add repos here that show real strengths AND real weaknesses; e.g. very
-# active but solo-maintained, or very popular but slow to merge PRs.
-
-# === Weak (8) ===============================================================
-# Add repos here that show significant concerns; e.g. abandoned, archived,
-# stale releases for years, broken CI.
-
-# === High Risk (6) ==========================================================
-# Only repos with documented evidence of fake-star campaigns or deceptive
-# packaging from credible third parties (academic papers, news, takedowns).
-# We do NOT add to this category based on our own judgement alone.
+full_name,expected_category,notes
+prometheus/prometheus,Strong,active Go project; high stars + maintainers + downloads
+kubernetes/kubernetes,Strong,massive multi-org project; max activity
+lodash/lodash,Good,popular npm utility; mature
+psf/requests,Good,popular Python HTTP client; mature
+axios/axios,Good,popular npm HTTP client
+facebook/react,Strong,corporate-backed; high adoption
+vuejs/vue,Good,community-led; well-documented
+rust-lang/cargo,Strong,Rust toolchain; canonical
+fastapi/fastapi,Good,growing Python framework
+django/django,Strong,mature Python framework; well-governed

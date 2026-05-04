@@ -1,3 +1,11 @@
+#![allow(
+    clippy::unused_async,
+    clippy::float_cmp,
+    clippy::doc_lazy_continuation,
+    clippy::unreadable_literal,
+    clippy::too_many_lines
+)]
+
 //! Insta snapshot test for the terminal report writer.
 //!
 //! Spec: `specs/reports-terminal.md` S-401 — render a fixed

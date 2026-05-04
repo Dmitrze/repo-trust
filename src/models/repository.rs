@@ -40,8 +40,8 @@ pub struct RepositoryContext {
     pub github: GithubClient,
     pub scorecard: ScorecardClient,
     pub osv: OsvClient,
-    /// STUB: scan-pipeline-day3 wires this real. Carries the deps.dev
-    /// federated client that the Adoption Signals module consumes.
+    /// Carries the deps.dev federated client that the Adoption Signals
+    /// module consumes (per ADR-0012).
     pub deps_dev: DepsDevClient,
 }
 
