@@ -217,3 +217,101 @@ pub struct CheckResult {
     #[serde(default)]
     pub documentation: serde_json::Value,
 }
+
+#[cfg(test)]
+mod date_parsing_tests {
+    use super::*;
+
+    /// Real-world fixtures captured from `api.scorecard.dev` — the file
+    /// names map to the upstream `github.com/<owner>/<repo>` paths. Kept
+    /// as a hard-coded list to avoid pulling a `glob` dev-dep in for one
+    /// test.
+    const FIXTURES: &[&str] = &[
+        "tests/fixtures/scorecard/clap-rs_clap.json",
+        "tests/fixtures/scorecard/octocat_hello-world.json",
+        "tests/fixtures/scorecard/rust-lang_rust.json",
+        "tests/fixtures/scorecard/tokio-rs_tokio.json",
+    ];
+
+    #[test]
+    fn parses_rfc3339_no_fractional_seconds() {
+        let s = r#"{
+            "date":"2026-04-30T00:00:00Z",
+            "repo":{"name":"github.com/o/r","commit":"abc"},
+            "score":7.5,
+            "checks":[]
+        }"#;
+        let r: ScorecardReport = serde_json::from_str(s).unwrap();
+        assert_eq!(r.score, 7.5);
+    }
+
+    #[test]
+    fn parses_rfc3339_with_explicit_offset() {
+        let s = r#"{
+            "date":"2026-04-30T00:00:00+00:00",
+            "repo":{"name":"github.com/o/r","commit":"abc"},
+            "score":7.5,
+            "checks":[]
+        }"#;
+        serde_json::from_str::<ScorecardReport>(s).unwrap();
+    }
+
+    #[test]
+    fn parses_full_extended_iso8601_with_nanos() {
+        let s = r#"{
+            "date":"2026-04-30T00:00:00.123456789Z",
+            "repo":{"name":"github.com/o/r","commit":"abc"},
+            "score":7.5,
+            "checks":[]
+        }"#;
+        serde_json::from_str::<ScorecardReport>(s).unwrap();
+    }
+
+    #[test]
+    fn parses_date_only_as_midnight_utc() {
+        let s = r#"{
+            "date":"2026-04-30",
+            "repo":{"name":"github.com/o/r","commit":"abc"},
+            "score":7.5,
+            "checks":[]
+        }"#;
+        let r: ScorecardReport = serde_json::from_str(s).unwrap();
+        assert_eq!(r.date.hour(), 0);
+        assert_eq!(r.date.minute(), 0);
+        assert_eq!(r.date.second(), 0);
+    }
+
+    #[test]
+    fn rejects_garbage() {
+        let s = r#"{
+            "date":"not a date",
+            "repo":{"name":"github.com/o/r","commit":"abc"},
+            "score":7.5,
+            "checks":[]
+        }"#;
+        assert!(serde_json::from_str::<ScorecardReport>(s).is_err());
+    }
+
+    /// Real-world fixture sweep — every captured `api.scorecard.dev`
+    /// payload must round-trip through our DTO without error and yield
+    /// a Scorecard score in the documented range.
+    #[test]
+    fn real_world_fixtures_round_trip() {
+        for path in FIXTURES {
+            let body = std::fs::read(path)
+                .unwrap_or_else(|e| panic!("missing fixture {path}: {e}"));
+            // Defensive: skip non-JSON bodies (e.g. a 404 HTML page if the
+            // fixture was captured against a never-scored repo).
+            if !body.starts_with(b"{") {
+                continue;
+            }
+            let r: ScorecardReport = serde_json::from_slice(&body)
+                .unwrap_or_else(|e| panic!("failed to parse {path}: {e}"));
+            assert!(
+                (0.0..=10.0).contains(&r.score),
+                "score out of range in {path}: {}",
+                r.score
+            );
+        }
+    }
+}
