@@ -247,6 +247,49 @@ impl Client {
         Ok(all)
     }
 
+    /// `GET /repos/{owner}/{repo}/readme` — fetches the default-branch
+    /// README and base64-decodes its contents.
+    ///
+    /// Returns `Ok(Some(text))` on 200 (UTF-8 decoded), `Ok(None)` on 404
+    /// (no README), and `Err` on any other failure or decoding error.
+    pub async fn get_readme(&self, owner: &str, repo: &str) -> Result<Option<String>> {
+        let cache_key = format!("github:repos:{owner}/{repo}:readme");
+        let api_path = format!("/repos/{owner}/{repo}/readme");
+        let body = match self
+            .fetch_json(&cache_key, &api_path, None, TTL_REPO_METADATA)
+            .await
+        {
+            Ok(b) => b,
+            Err(e) => match e.downcast_ref::<GithubError>() {
+                Some(GithubError::NotFound) => return Ok(None),
+                _ => return Err(e),
+            },
+        };
+        let resp: ReadmeResponse =
+            serde_json::from_slice(&body).context("parse readme response")?;
+        let cleaned: String = resp
+            .content
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        let decoded = base64_decode(&cleaned).context("base64-decode readme content")?;
+        let text = String::from_utf8(decoded).context("readme is not valid UTF-8")?;
+        Ok(Some(text))
+    }
+
+    /// `GET /users/{login}` — single user profile. Used by the Star
+    /// Authenticity collector to apply the 9-signal low-activity profile
+    /// per `methodology.md` §Module 1.
+    pub async fn get_user(&self, login: &str) -> Result<UserProfile> {
+        let key = format!("github:users:{login}");
+        let path = format!("/users/{login}");
+        let body = self
+            .fetch_json(&key, &path, None, TTL_REPO_METADATA)
+            .await?;
+        let parsed: UserProfile = serde_json::from_slice(&body).context("parse UserProfile")?;
+        Ok(parsed)
+    }
+
     /// `GET /repos/{owner}/{repo}/contents/{path}` — for doc-presence checks
     /// in the Security module. Returns `Ok(true)` on 200, `Ok(false)` on 404.
     pub async fn file_exists(&self, owner: &str, repo: &str, path: &str) -> Result<bool> {
@@ -347,6 +390,48 @@ impl Client {
             },
         }
     }
+}
+
+// ─── Internals: base64 decoder ────────────────────────────────────────────
+
+/// Minimal RFC 4648 base64 decoder for GitHub's `/readme` endpoint payload.
+///
+/// We do not pull in a base64 crate as a runtime dep just for this single
+/// call site; the README endpoint is the only consumer in v1. Permits the
+/// standard alphabet (`A-Za-z0-9+/`) plus the URL-safe alphabet (`-_`),
+/// strips padding (`=`), and accepts arbitrary inter-character whitespace.
+fn base64_decode(input: &str) -> Result<Vec<u8>> {
+    fn val(c: u8) -> Option<u8> {
+        match c {
+            b'A'..=b'Z' => Some(c - b'A'),
+            b'a'..=b'z' => Some(c - b'a' + 26),
+            b'0'..=b'9' => Some(c - b'0' + 52),
+            b'+' | b'-' => Some(62),
+            b'/' | b'_' => Some(63),
+            _ => None,
+        }
+    }
+    let mut out = Vec::with_capacity(input.len() * 3 / 4);
+    let mut buf: u32 = 0;
+    let mut bits: u8 = 0;
+    for &c in input.as_bytes() {
+        if c == b'=' {
+            break;
+        }
+        if c.is_ascii_whitespace() {
+            continue;
+        }
+        let Some(v) = val(c) else {
+            anyhow::bail!("invalid base64 character: {}", c as char);
+        };
+        buf = (buf << 6) | u32::from(v);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push(((buf >> bits) & 0xFF) as u8);
+        }
+    }
+    Ok(out)
 }
 
 // ─── DTOs (only the fields the modules use) ───────────────────────────────
@@ -455,6 +540,27 @@ pub struct ContributorMeta {
     pub user_type: Option<String>,
 }
 
+/// Public user profile fields used by the Star Authenticity 9-signal
+/// composite (`methodology.md` §Module 1, Heuristic 1).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UserProfile {
+    pub login: String,
+    #[serde(with = "time::serde::iso8601")]
+    pub created_at: OffsetDateTime,
+    pub followers: u64,
+    pub following: u64,
+    pub public_repos: u64,
+    pub public_gists: u64,
+    #[serde(default)]
+    pub bio: Option<String>,
+    #[serde(default)]
+    pub blog: Option<String>,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default, rename = "type")]
+    pub user_type: Option<String>,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum StargazerEntry {
@@ -474,5 +580,48 @@ impl StargazerEntry {
         match self {
             Self::WithDate { user, .. } | Self::Plain(user) => &user.login,
         }
+    }
+}
+
+/// `GET /repos/{owner}/{repo}/readme` response body.
+///
+/// GitHub returns the README as a base64-encoded `content` blob plus the
+/// canonical filename and the encoding (always `"base64"` for this endpoint).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ReadmeResponse {
+    pub name: String,
+    /// Base64-encoded README body. Whitespace inside the value is stripped
+    /// before decoding.
+    pub content: String,
+    pub encoding: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::base64_decode;
+
+    #[test]
+    fn base64_decode_basic() {
+        // "hello world" → "aGVsbG8gd29ybGQ="
+        let out = base64_decode("aGVsbG8gd29ybGQ=").unwrap();
+        assert_eq!(out, b"hello world");
+    }
+
+    #[test]
+    fn base64_decode_strips_whitespace() {
+        let out = base64_decode("aGVs\nbG8g\nd29y\nbGQ=").unwrap();
+        assert_eq!(out, b"hello world");
+    }
+
+    #[test]
+    fn base64_decode_no_padding() {
+        // "hi" → "aGk="
+        let out = base64_decode("aGk").unwrap();
+        assert_eq!(out, b"hi");
+    }
+
+    #[test]
+    fn base64_decode_invalid_char() {
+        assert!(base64_decode("****").is_err());
     }
 }

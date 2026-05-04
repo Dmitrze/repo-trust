@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 use super::scores::ModuleWeights;
+use crate::api::deps_dev::Client as DepsDevClient;
 use crate::api::github::Client as GithubClient;
 use crate::api::osv::Client as OsvClient;
 use crate::api::scorecard::Client as ScorecardClient;
@@ -39,6 +40,9 @@ pub struct RepositoryContext {
     pub github: GithubClient,
     pub scorecard: ScorecardClient,
     pub osv: OsvClient,
+    /// STUB: scan-pipeline-day3 wires this real. Carries the deps.dev
+    /// federated client that the Adoption Signals module consumes.
+    pub deps_dev: DepsDevClient,
 }
 
 impl RepositoryContext {

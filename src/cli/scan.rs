@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 use time::OffsetDateTime;
 
+use crate::api::deps_dev::Client as DepsDevClient;
 use crate::api::github::Client as GhClient;
 use crate::api::github::GithubError;
 use crate::api::osv::Client as OsvClient;
@@ -156,12 +157,14 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
     let mut github = GhClient::new(http.clone(), cache.clone(), limiter, token);
     let mut scorecard = ScorecardClient::new(http.clone(), cache.clone());
     let mut osv = OsvClient::new(http.clone(), cache.clone());
+    let mut deps_dev = DepsDevClient::new(http.clone(), cache.clone());
     if let Some(base) = args.api_base_url.as_deref() {
         github = github.with_base_url(base);
         // The same wiremock server hosts the federated mocks in tests; in
         // production the federated clients hit their real endpoints.
         scorecard = scorecard.with_base_url(base);
         osv = osv.with_base_url(base);
+        deps_dev = deps_dev.with_base_url(base);
     }
 
     // ─── Scoring version + seed ────────────────────────────────────────
@@ -188,11 +191,12 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
         github: github.clone(),
         scorecard,
         osv,
+        deps_dev,
     };
 
     // ─── Run modules ──────────────────────────────────────────────────
-    // Day 1: only Activity is wired end-to-end. Day 2 adds Maintainers + Security.
-    // Day 3 adds Stars + Adoption.
+    // Day 3: all 5 modules wired end-to-end. Default set in select_modules
+    // covers everything; users can subset via --modules / --skip-modules.
     let selected = select_modules(args.modules.as_ref(), args.skip_modules.as_ref());
     let mut module_results: Vec<ModuleResult> = Vec::new();
     let mut all_evidence = Vec::new();
@@ -212,9 +216,16 @@ pub async fn execute(args: ScanArgs) -> Result<u8> {
                 let m = crate::modules::security::SecurityModule;
                 Some(m.run(&ctx).await)
             },
-            // Stars + Adoption land Day 3.
+            "stars" => {
+                let m = crate::modules::stars::StarsModule;
+                Some(m.run(&ctx).await)
+            },
+            "adoption" => {
+                let m = crate::modules::adoption::AdoptionModule;
+                Some(m.run(&ctx).await)
+            },
             other => {
-                tracing::debug!(module = other, "skipping (not yet wired)");
+                tracing::debug!(module = other, "unknown module name; skipping");
                 None
             },
         };
@@ -313,10 +324,12 @@ fn mode_label(m: Mode) -> &'static str {
 }
 
 fn select_modules(enabled: Option<&Vec<String>>, skipped: Option<&Vec<String>>) -> Vec<String> {
-    // Day 2 default set: 3 modules wired end-to-end. Stars + Adoption land Day 3.
+    // Day 3 default set: all 5 modules wired end-to-end.
     let default_set = vec![
+        "stars".to_string(),
         "activity".to_string(),
         "maintainers".to_string(),
+        "adoption".to_string(),
         "security".to_string(),
     ];
     let mut selected: Vec<String> = match enabled {
