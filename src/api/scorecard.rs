@@ -182,7 +182,10 @@ impl Client {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScorecardReport {
     /// When the Scorecard run was executed.
-    #[serde(with = "time::serde::iso8601")]
+    #[serde(
+        deserialize_with = "deserialize_scorecard_date",
+        serialize_with = "time::serde::iso8601::serialize"
+    )]
     pub date: OffsetDateTime,
     /// The repository the run was performed against.
     pub repo: ScorecardRepoRef,
@@ -216,6 +219,54 @@ pub struct CheckResult {
     /// Scorecard adds fields.
     #[serde(default)]
     pub documentation: serde_json::Value,
+}
+
+/// Tolerant deserialiser for the `date` field returned by scorecard.dev.
+///
+/// scorecard.dev does not commit to a single ISO-8601 sub-format — runs
+/// have shipped with all of:
+///
+/// 1. RFC 3339 with no fractional seconds       `2026-04-30T00:00:00Z`
+/// 2. RFC 3339 with explicit `+00:00` offset    `2026-04-30T00:00:00+00:00`
+/// 3. Full extended ISO-8601                    `2026-04-30T00:00:00.123456789Z`
+/// 4. Date-only                                 `2026-04-30`
+///
+/// As of 2026-04 the public API returns format (4) for every run we've
+/// observed, but we don't assume that won't change again. This
+/// deserialiser tries the wider RFC 3339 grammar first, then the
+/// extended ISO-8601 parser, then a date-only fallback (promoted to
+/// midnight UTC).
+fn deserialize_scorecard_date<'de, D>(de: D) -> Result<OffsetDateTime, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error as _;
+    use time::format_description::well_known::{Iso8601, Rfc3339};
+
+    let raw = String::deserialize(de)?;
+
+    // Strategy 1 — RFC 3339 (covers the no-fractional-seconds and
+    // explicit-offset cases that scorecard.dev emits).
+    if let Ok(dt) = OffsetDateTime::parse(&raw, &Rfc3339) {
+        return Ok(dt);
+    }
+    // Strategy 2 — full extended ISO-8601, in case scorecard.dev does
+    // emit nanoseconds for some checks.
+    if let Ok(dt) = OffsetDateTime::parse(&raw, &Iso8601::DEFAULT) {
+        return Ok(dt);
+    }
+    // Strategy 3 — date-only (`YYYY-MM-DD`), promoted to midnight UTC.
+    if let Ok(d) = time::Date::parse(
+        &raw,
+        time::macros::format_description!("[year]-[month]-[day]"),
+    ) {
+        return Ok(d.midnight().assume_utc());
+    }
+
+    Err(D::Error::custom(format!(
+        "scorecard.dev `date` field is not a recognised ISO-8601 / RFC 3339 / \
+         date-only string: {raw:?}"
+    )))
 }
 
 #[cfg(test)]
@@ -298,8 +349,8 @@ mod date_parsing_tests {
     #[test]
     fn real_world_fixtures_round_trip() {
         for path in FIXTURES {
-            let body = std::fs::read(path)
-                .unwrap_or_else(|e| panic!("missing fixture {path}: {e}"));
+            let body =
+                std::fs::read(path).unwrap_or_else(|e| panic!("missing fixture {path}: {e}"));
             // Defensive: skip non-JSON bodies (e.g. a 404 HTML page if the
             // fixture was captured against a never-scored repo).
             if !body.starts_with(b"{") {
