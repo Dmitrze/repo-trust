@@ -1,68 +1,41 @@
-<svg viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Repo Trust — Multi-dimensional trust scoring for GitHub repositories">
-  <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f172a"/>
-      <stop offset="50%" stop-color="#1e293b"/>
-      <stop offset="100%" stop-color="#0f172a"/>
-    </linearGradient>
-    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="100%" stop-color="#0ea5e9"/>
-    </linearGradient>
-    <linearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#cbd5e1"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
+<svg viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Repo Trust — GitHub trust scoring beyond stars">
+  <title>Repo Trust — GitHub trust scoring beyond stars</title>
+  <desc>Banner for the Repo Trust open-source CLI tool. Pure black background with white sans-serif title, lavender italic serif accent, italic serif subtitle, and green status indicator.</desc>
 
-  <rect width="1200" height="320" rx="16" fill="url(#bgGrad)"/>
+  <!-- Pure black background -->
+  <rect width="1200" height="360" fill="#000000"/>
 
-  <ellipse cx="500" cy="170" rx="500" ry="170" fill="url(#glow)"/>
-
-  <g opacity="0.06" stroke="#22d3ee" stroke-width="1">
-    <line x1="0" y1="50" x2="1200" y2="50"/>
-    <line x1="0" y1="100" x2="1200" y2="100"/>
-    <line x1="0" y1="150" x2="1200" y2="150"/>
-    <line x1="0" y1="200" x2="1200" y2="200"/>
-    <line x1="0" y1="250" x2="1200" y2="250"/>
+  <!-- Shield with checkmark icon, top center, white outline on black -->
+  <g transform="translate(584, 36)" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M16 0 L32 6 L32 26 Q32 38 16 46 Q0 38 0 26 L0 6 Z" stroke-width="1.6"/>
+    <path d="M9 22 L14 27 L24 16" stroke-width="2.2"/>
   </g>
 
-  <g transform="translate(80, 95)">
-    <circle cx="70" cy="75" r="82" fill="#06b6d4" opacity="0.18"/>
-    <path d="M70 0 L130 25 L130 95 Q130 135 70 150 Q10 135 10 95 L10 25 Z" fill="url(#shieldGrad)"/>
-    <path d="M48 72 L65 89 L96 56" stroke="#0f172a" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+  <!-- Brand label small caps gray, like "DMITRY MELNIK" on his site -->
+  <text x="600" y="108" text-anchor="middle"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+        font-size="11" font-weight="600" fill="#9ca3af" letter-spacing="4">REPO TRUST</text>
 
-  <text x="260" y="130" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif" font-size="82" font-weight="800" fill="url(#titleGrad)" letter-spacing="-3">Repo Trust</text>
+  <!-- Big sans bold white, like "Fractional" -->
+  <text x="600" y="188" text-anchor="middle"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+        font-size="62" font-weight="800" fill="#ffffff" letter-spacing="-2">GitHub trust scoring,</text>
 
-  <text x="260" y="172" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" font-size="22" font-weight="600" fill="#22d3ee">Multi-dimensional trust scoring for GitHub repositories — beyond the star count.</text>
+  <!-- Big italic serif lavender accent, like "Chief AI Officer" -->
+  <text x="600" y="244" text-anchor="middle"
+        font-family="Georgia, 'Playfair Display', 'Times New Roman', serif"
+        font-size="50" font-style="italic" font-weight="500" fill="#c4b5fd" letter-spacing="-1">beyond stars.</text>
 
-  <text x="260" y="205" font-family="ui-sans-serif, -apple-system, system-ui, sans-serif" font-size="17" font-style="italic" fill="#94a3b8">Find out which repos are actually maintained, secure, and worth depending on.</text>
+  <!-- Italic serif gray subtitle, like his "I walk in, audit..." -->
+  <text x="600" y="288" text-anchor="middle"
+        font-family="Georgia, 'Playfair Display', 'Times New Roman', serif"
+        font-size="15" font-style="italic" fill="#9ca3af">Find out which repos are actually maintained, secure, and worth depending on.</text>
 
-  <g transform="translate(260, 240)">
-    <g>
-      <rect width="108" height="34" rx="17" fill="#a78bfa" fill-opacity="0.18" stroke="#a78bfa" stroke-width="1.5"/>
-      <text x="54" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#c4b5fd">⭐ Stars</text>
-    </g>
-    <g transform="translate(120, 0)">
-      <rect width="118" height="34" rx="17" fill="#34d399" fill-opacity="0.18" stroke="#34d399" stroke-width="1.5"/>
-      <text x="59" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#6ee7b7">📈 Activity</text>
-    </g>
-    <g transform="translate(250, 0)">
-      <rect width="148" height="34" rx="17" fill="#fbbf24" fill-opacity="0.18" stroke="#fbbf24" stroke-width="1.5"/>
-      <text x="74" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#fcd34d">👥 Maintainers</text>
-    </g>
-    <g transform="translate(410, 0)">
-      <rect width="128" height="34" rx="17" fill="#60a5fa" fill-opacity="0.18" stroke="#60a5fa" stroke-width="1.5"/>
-      <text x="64" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#93c5fd">🌍 Adoption</text>
-    </g>
-    <g transform="translate(550, 0)">
-      <rect width="122" height="34" rx="17" fill="#fb7185" fill-opacity="0.18" stroke="#fb7185" stroke-width="1.5"/>
-      <text x="61" y="22" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" fill="#fda4af">🔒 Security</text>
-    </g>
+  <!-- Status row centered, green dot + small caps gray, like "TAKING 2-3 PROJECTS A MONTH" -->
+  <g transform="translate(517, 320)">
+    <circle cx="4" cy="-3" r="3.5" fill="#4ade80"/>
+    <text x="16" y="0"
+          font-family="ui-sans-serif, -apple-system, system-ui, sans-serif"
+          font-size="10.5" font-weight="600" fill="#9ca3af" letter-spacing="3.5">ACCEPTING SPONSORS</text>
   </g>
 </svg>
