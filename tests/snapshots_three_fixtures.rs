@@ -438,7 +438,7 @@ async fn mount_prometheus(server: &MockServer) {
         .await;
     Mock::given(method("GET"))
         .and(path(
-            "/v3/systems/GO/packages/github.com/prometheus/prometheus",
+            "/v3/systems/GO/packages/github.com%2Fprometheus%2Fprometheus",
         ))
         .respond_with(ok(PROMETHEUS_GO_PACKAGE))
         .mount(server)

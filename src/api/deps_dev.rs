@@ -144,6 +144,11 @@ impl Client {
 
     /// `GET /v3/systems/{system}/packages/{name}` — per-package metadata.
     ///
+    /// `name` is URL-encoded so package identifiers that legitimately
+    /// contain slashes (GO modules like `github.com/tokio-rs/tokio`,
+    /// Maven coordinates, etc.) round-trip without the path router
+    /// splitting them across path segments.
+    ///
     /// Returns:
     /// - `Ok(info)` on a 200 response.
     /// - `Err(DepsDevError::NotFound)` on a 404 — the caller is asking for a
@@ -152,7 +157,8 @@ impl Client {
     ///   errors.
     pub async fn package(&self, system: &str, name: &str) -> Result<PackageInfo> {
         let key = format!("deps_dev:systems:{system}:{name}");
-        let path = format!("/v3/systems/{system}/packages/{name}");
+        let encoded_name = encode_path_segment(name);
+        let path = format!("/v3/systems/{system}/packages/{encoded_name}");
         let body = self.fetch_json(&key, &path, TTL_DEPS_DEV).await?;
         let parsed: PackageInfo =
             serde_json::from_slice(&body).context("parse deps.dev PackageInfo")?;
@@ -226,19 +232,29 @@ impl Client {
     }
 }
 
-/// Hand-rolled minimal percent-encoder for the deps.dev project key.
-/// `owner` and `repo` are GitHub identifiers, so the only legitimately
-/// problematic characters are the slashes we deliberately want to
-/// encode (`/` → `%2F`). We also escape `:` defensively in case the
-/// project ever needs to embed an org with one. Anything else is
-/// passed through — repo names are constrained by GitHub to
-/// `[A-Za-z0-9._-]`.
+/// Hand-rolled minimal percent-encoder for path segments that
+/// legitimately contain `/` or `:` and must round-trip through
+/// deps.dev's HTTP router without being split. Used for both the
+/// project key (`github.com/{owner}/{repo}`) and per-package names
+/// like `github.com/tokio-rs/tokio` (Go modules).
 ///
 /// We do not pull `urlencoding` / `percent-encoding` runtime crates
-/// for two replacements.
+/// for two replacements. GitHub identifiers and deps.dev package
+/// names use `[A-Za-z0-9._-]` plus the `/` and `:` we deliberately
+/// escape — anything else is rare enough that we'd rather see a
+/// failed lookup than silently mis-route.
+fn encode_path_segment(s: &str) -> String {
+    s.replace('/', "%2F").replace(':', "%3A")
+}
+
+/// Project key for the v3alpha endpoint:
+/// `github.com%2F{owner}%2F{repo}`.
 fn encode_project_key(owner: &str, repo: &str) -> String {
-    let escape = |s: &str| s.replace('/', "%2F").replace(':', "%3A");
-    format!("github.com%2F{}%2F{}", escape(owner), escape(repo))
+    format!(
+        "github.com%2F{}%2F{}",
+        encode_path_segment(owner),
+        encode_path_segment(repo)
+    )
 }
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
@@ -307,26 +323,112 @@ impl<'de> Deserialize<'de> for PackageRef {
     }
 }
 
-/// Per-package metadata returned by `Client::package`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Per-package metadata returned by [`Client::package`].
+///
+/// Deserialises from either of two shapes deps.dev v3 has shipped:
+///
+/// 1. Legacy flat:
+///    `{ "system": "...", "name": "...", "weeklyDownloads": "50000000",
+///       "latestVersion": "4.17.21" }`
+/// 2. Current (2026): nested `packageKey` + `versions[]`:
+///    `{ "packageKey": { "system": "...", "name": "..." },
+///       "versions": [
+///         { "versionKey": { ..., "version": "1.0.0" },
+///           "publishedAt": "...", "isDefault": true, ... }, ... ] }`
+///
+/// `weekly_downloads` is no longer surfaced anywhere on the v3
+/// per-package endpoint — every value is `None` against the live API.
+/// Kept on the public type so downstream features/scorers don't need
+/// to change; restoring populated downloads is a separate piece of
+/// scope (deps.dev's `:queryContainer`-style endpoints, ecosystems'
+/// own download APIs, or BigQuery exports).
+#[derive(Debug, Clone, Serialize)]
 pub struct PackageInfo {
-    /// Package system, e.g. `NPM`.
     pub system: String,
-    /// Package name within the system, e.g. `lodash`.
     pub name: String,
-    /// Weekly downloads where deps.dev provides them. **deps.dev returns this
-    /// field as a JSON string** (e.g. `"50000000"`) rather than a number, so
-    /// we parse it via the private `deserialize_string_to_u64_option`
-    /// helper.
-    #[serde(
-        default,
-        rename = "weeklyDownloads",
-        deserialize_with = "deserialize_string_to_u64_option"
-    )]
     pub weekly_downloads: Option<u64>,
-    /// Latest published version where deps.dev knows it.
-    #[serde(default, rename = "latestVersion")]
     pub latest_version: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for PackageInfo {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct VersionKey {
+            version: String,
+        }
+
+        #[derive(Deserialize)]
+        struct VersionEntry {
+            #[serde(rename = "versionKey")]
+            version_key: VersionKey,
+            #[serde(default, rename = "isDefault")]
+            is_default: bool,
+        }
+
+        #[derive(Deserialize)]
+        struct PackageKey {
+            system: String,
+            name: String,
+        }
+
+        #[derive(Deserialize)]
+        struct NestedShape {
+            #[serde(rename = "packageKey")]
+            package_key: PackageKey,
+            #[serde(default)]
+            versions: Vec<VersionEntry>,
+        }
+
+        #[derive(Deserialize)]
+        struct FlatShape {
+            system: String,
+            name: String,
+            #[serde(
+                default,
+                rename = "weeklyDownloads",
+                deserialize_with = "deserialize_string_to_u64_option"
+            )]
+            weekly_downloads: Option<u64>,
+            #[serde(default, rename = "latestVersion")]
+            latest_version: Option<String>,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Wire {
+            Nested(NestedShape),
+            Flat(FlatShape),
+        }
+
+        Ok(match Wire::deserialize(de)? {
+            Wire::Nested(n) => {
+                // Pick the `isDefault` version's string if present, else
+                // the last entry (deps.dev returns versions in publish
+                // order — the last one is typically the most recent).
+                let latest_version = n
+                    .versions
+                    .iter()
+                    .find(|v| v.is_default)
+                    .or(n.versions.last())
+                    .map(|v| v.version_key.version.clone());
+                PackageInfo {
+                    system: n.package_key.system,
+                    name: n.package_key.name,
+                    weekly_downloads: None,
+                    latest_version,
+                }
+            },
+            Wire::Flat(f) => PackageInfo {
+                system: f.system,
+                name: f.name,
+                weekly_downloads: f.weekly_downloads,
+                latest_version: f.latest_version,
+            },
+        })
+    }
 }
 
 /// Internal envelope for the project-packages response. deps.dev
