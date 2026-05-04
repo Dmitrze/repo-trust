@@ -1,11 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 🔒 Security vulnerability
-    url: https://github.com/Dmitrze/repo-trust/security/advisories/new
-    about: Report a vulnerability privately via GitHub Security Advisories — NOT a public issue.
-  - name: 💬 Discussion
+  - name: Discussion
     url: https://github.com/Dmitrze/repo-trust/discussions
     about: Open-ended question, design discussion, or "how would you handle X".
-  - name: 💎 Sponsorship
-    url: https://github.com/sponsors/Dmitrze
-    about: Support continued maintenance.
+  - name: Security vulnerability
+    url: https://github.com/Dmitrze/repo-trust/security/advisories/new
+    about: Report a vulnerability privately via GitHub Security Advisories — NOT a public issue.

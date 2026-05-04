@@ -2,8 +2,8 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
 
 github: [Dmitrze]
+custom: ['https://dmitrymelnik.ai']
 
 # Future: open-collective, ko-fi, etc.
 # open_collective:
 # tidelift: "cargo/repo-trust"
-# custom: ["https://..."]
