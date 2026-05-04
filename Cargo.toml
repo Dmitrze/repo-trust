@@ -118,6 +118,9 @@ pulldown-cmark = { version = "0.10", default-features = false }
 # CSV round-trip parser used by `reports::csv_report` tests only — never
 # pulled into the runtime build (see specs/reports-csv.md).
 csv = "1.3"
+# `tower` provides `ServiceExt::oneshot` for axum integration tests;
+# dev-only — not a runtime dep. Already in the tree via tower-http.
+tower = { version = "0.5", features = ["util"] }
 
 # ─── Features ──────────────────────────────────────────────────────────
 [features]

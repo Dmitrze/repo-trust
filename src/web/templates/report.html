@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ report.repository.full_name }} — repo-trust{% endblock %}
+
+{% block content %}
+<p class="muted"><a href="/">&larr; All reports</a></p>
+
+<h2>{{ report.repository.full_name }}</h2>
+<p>
+    <span class="score">Score {{ report.overall_score }}</span>
+    &middot;
+    <span class="cat {{ report.category }}">{{ report.category }}</span>
+    &middot;
+    confidence {{ report.overall_confidence }}
+    &middot;
+    mode {{ report.mode }}
+</p>
+<p class="muted">
+    <a href="{{ report.repository.url }}" rel="noopener">{{ report.repository.url }}</a>
+    &middot; default branch <code>{{ report.repository.default_branch }}</code>
+    {% if let Some(lang) = report.repository.primary_language %}
+    &middot; {{ lang }}
+    {% endif %}
+    &middot; {{ report.repository.stars }} stars
+</p>
+<p class="muted">
+    scoring v{{ report.scoring_version }}
+    &middot; schema v{{ report.schema_version }}
+    &middot;
+    <a href="/api/reports/{{ report.repository.full_name }}">JSON</a>
+</p>
+
+<h3>Modules</h3>
+<div class="cards">
+    {% for m in report.modules %}
+    <div class="card">
+        <h3>{{ m.module }}</h3>
+        <div class="module-score">{{ m.score }}</div>
+        <div class="muted">confidence {{ m.confidence }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if !report.top_strengths.is_empty() %}
+<h3>Top strengths</h3>
+<ul class="evidence">
+    {% for e in report.top_strengths %}
+    <li class="{{ e.verdict }}">
+        <strong>{{ e.label }}</strong>
+        <span class="muted">— <code>{{ e.module }}::{{ e.code }}</code></span>
+        <div>{{ e.rationale }}</div>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if !report.top_concerns.is_empty() %}
+<h3>Top concerns</h3>
+<ul class="evidence">
+    {% for e in report.top_concerns %}
+    <li class="{{ e.verdict }}">
+        <strong>{{ e.label }}</strong>
+        <span class="muted">— <code>{{ e.module }}::{{ e.code }}</code></span>
+        <div>{{ e.rationale }}</div>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<h3>Evidence</h3>
+<ul class="evidence">
+    {% for e in report.evidence %}
+    <li class="{{ e.verdict }}">
+        <strong>{{ e.label }}</strong>
+        <span class="muted">— <code>{{ e.module }}::{{ e.code }}</code> ({{ e.verdict }})</span>
+        <div>{{ e.rationale }}</div>
+    </li>
+    {% endfor %}
+</ul>
+
+{% if !report.caveats.is_empty() %}
+<h3>Caveats</h3>
+<ul>
+    {% for c in report.caveats %}
+    <li>{{ c }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

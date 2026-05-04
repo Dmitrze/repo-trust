@@ -65,6 +65,16 @@ pub struct CacheInfo {
     pub bytes_on_disk: u64,
 }
 
+/// One row per `(repo, mode, scoring_ver)` returned by
+/// [`Cache::list_all_reports`]. The web viewer's index page renders these.
+#[derive(Debug, Clone)]
+pub struct ReportSummary {
+    pub repo: String,
+    pub mode: String,
+    pub scoring_ver: String,
+    pub computed_at: OffsetDateTime,
+}
+
 impl Cache {
     /// Open or create the cache at `path`. Runs all pending migrations and
     /// (on Unix) tightens the file permissions to 0600.
@@ -293,6 +303,38 @@ impl Cache {
         Ok(row)
     }
 
+    /// One row per `(repo, mode, scoring_ver)` — the most recent
+    /// `computed_at` for each tuple. Sorted newest-first. Used by the web
+    /// viewer's index page.
+    pub fn list_all_reports(&self) -> Result<Vec<ReportSummary>> {
+        let conn = self.pool.get()?;
+        let mut stmt = conn.prepare(
+            "SELECT repo, mode, scoring_ver, MAX(computed_at) AS latest
+             FROM reports
+             GROUP BY repo, mode, scoring_ver
+             ORDER BY latest DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                let repo: String = r.get(0)?;
+                let mode: String = r.get(1)?;
+                let scoring_ver: String = r.get(2)?;
+                let computed_at: String = r.get(3)?;
+                Ok((repo, mode, scoring_ver, computed_at))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut out = Vec::with_capacity(rows.len());
+        for (repo, mode, scoring_ver, computed_at) in rows {
+            out.push(ReportSummary {
+                repo,
+                mode,
+                scoring_ver,
+                computed_at: parse_iso(&computed_at)?,
+            });
+        }
+        Ok(out)
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────
 
     #[cfg(unix)]
@@ -477,6 +519,30 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(body, br#"{"v":2}"#.to_vec(), "latest write should win");
+    }
+
+    #[test]
+    fn list_all_reports_groups_by_tuple_and_orders_newest_first() {
+        let (cache, _dir) = fresh_cache();
+        // Two writes for acme/widget — only the latest computed_at should
+        // surface for that tuple.
+        cache
+            .put_report("acme/widget", "standard", "1.0.0", b"{\"v\":1}")
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        cache
+            .put_report("acme/widget", "standard", "1.0.0", b"{\"v\":2}")
+            .unwrap();
+        // Older write for octocat/Hello-World.
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        cache
+            .put_report("octocat/Hello-World", "standard", "1.0.0", b"{}")
+            .unwrap();
+        let rows = cache.list_all_reports().unwrap();
+        assert_eq!(rows.len(), 2, "tuple-grouped, not row-counted");
+        // Newest first.
+        assert_eq!(rows[0].repo, "octocat/Hello-World");
+        assert_eq!(rows[1].repo, "acme/widget");
     }
 
     #[test]

@@ -1,0 +1,203 @@
+/* Repo Trust web viewer — minimal stylesheet, no JS required.
+   Light/dark adapts to user OS preference. */
+
+:root {
+    --bg: #fdfdfc;
+    --fg: #1f1f1e;
+    --muted: #6b6b69;
+    --border: #e5e5e2;
+    --accent: #2c5cf6;
+    --strong: #1d8348;
+    --good: #2e86c1;
+    --mixed: #b9770e;
+    --weak: #ca6f1e;
+    --highrisk: #c0392b;
+    --card-bg: #ffffff;
+    --code-bg: #f4f4f2;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #181818;
+        --fg: #e6e6e3;
+        --muted: #9c9c97;
+        --border: #303030;
+        --accent: #6189ff;
+        --card-bg: #222222;
+        --code-bg: #2a2a2a;
+    }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+        Arial, sans-serif;
+    line-height: 1.5;
+    font-size: 16px;
+}
+
+main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+}
+
+header.site {
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    background: var(--card-bg);
+}
+
+header.site h1 {
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+header.site h1 a {
+    color: var(--fg);
+    text-decoration: none;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+th, td {
+    text-align: left;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.score {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.cat {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+}
+
+.cat.Strong   { color: #fff; background: var(--strong); border-color: var(--strong); }
+.cat.Good     { color: #fff; background: var(--good); border-color: var(--good); }
+.cat.Mixed    { color: #fff; background: var(--mixed); border-color: var(--mixed); }
+.cat.Weak     { color: #fff; background: var(--weak); border-color: var(--weak); }
+.cat.HighRisk { color: #fff; background: var(--highrisk); border-color: var(--highrisk); }
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.85rem;
+    margin: 1.25rem 0;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.85rem 1rem;
+}
+
+.card h3 {
+    margin: 0 0 0.4rem;
+    font-size: 0.95rem;
+    text-transform: capitalize;
+}
+
+.card .module-score {
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+.empty {
+    margin: 3rem 0;
+    text-align: center;
+    color: var(--muted);
+}
+
+.empty code {
+    background: var(--code-bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+}
+
+ul.evidence {
+    list-style: none;
+    padding: 0;
+}
+
+ul.evidence li {
+    border-left: 3px solid var(--border);
+    padding: 0.3rem 0.75rem;
+    margin: 0.4rem 0;
+}
+
+ul.evidence li.Positive   { border-left-color: var(--strong); }
+ul.evidence li.Neutral    { border-left-color: var(--muted); }
+ul.evidence li.Concerning { border-left-color: var(--mixed); }
+ul.evidence li.HighRisk   { border-left-color: var(--highrisk); }
+
+ul.evidence code {
+    background: var(--code-bg);
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.85rem;
+}
+
+.scan-form {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.scan-form input,
+.scan-form select,
+.scan-form button {
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+}
+
+.scan-form button {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    cursor: pointer;
+}
