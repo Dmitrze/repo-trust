@@ -6,7 +6,7 @@
 
 ## Current scoring version
 
-**`1.1.0`** — Adoption confidence rule re-tiered around ecosystem coverage after deps.dev v3 dropped `weeklyDownloads` upstream. See change-log entry below.
+**`1.1.1`** — Adoption calibration patch on top of 1.1.0: deps.dev `relationProvenance` + name-match + min-version filter on the project-packages response, and a widened "documented" predicate in the Adoption confidence rule. See change-log entry below.
 
 ## Default module weights (v1.0.0)
 
@@ -77,6 +77,21 @@ For users who care most about authenticity signals (e.g. funds doing diligence o
 ---
 
 ## Change log
+
+### `1.1.1` — 2026-05-05
+
+**Adoption — calibration patch.** Two narrow tweaks identified during the H1 sweep follow-up.
+
+1. `is_well_documented` widens the confidence rule's "documented" predicate: `documentation_maturity_score >= 0.50` OR `has_readme && (has_docs_dir || has_examples_dir)`. Promotes idiomatic library-project-layout repos (short README + `examples/`, like clap-rs/clap) to High confidence when they have packages and aren't archived. The doc-maturity *score* is unchanged.
+2. The deps.dev `:packageversions` response is filtered by a combined heuristic before being projected onto `Vec<PackageRef>`:
+   - Verified `relationProvenance` ∈ `{GO_ORIGIN}` (the only verified provenance deps.dev emits as of mid-2026; CARGO/NPM/PYPI/MAVEN entries all come back as `UNVERIFIED_METADATA`), **OR** owner-aware name match (CARGO/`tokio` for `tokio-rs/tokio`, NPM/`@octocat/hello-world` for `octocat/Hello-World`, GO/`github.com/owner/repo` for `owner/repo`); **AND**
+   - At least two distinct versions per `(system, name)` group, to filter out single-tagged demo repos that appear as `GO_ORIGIN` simply because every GitHub repo with one git tag is reachable as a Go module path.
+
+   Eliminates the `octocat/Hello-World` transitive-mention false-positive (where `package_systems_count` was inflated by appearances in unrelated packages' `SOURCE_REPO` field).
+
+This is a patch bump because the confidence rule shape (the truth table) is unchanged from 1.1.0; only the constituent predicates got more generous (documented) or more strict (first-party). Per-module score arithmetic and weights are unchanged. Per-module Adoption *scores* can shift on real-world inputs because `package_systems_count` may now be lower (filtered) or unchanged; overall scores can shift by ±1 point on repos whose adoption confidence tier moved (confidence-weighted aggregation in `aggregate.rs`).
+
+**Empirical note.** The architect's prompt anticipated a per-ecosystem verified provenance enum (`CARGO_OWNER` / `PYPI_OWNER` / etc.). Across the captured fixtures, deps.dev only emits `GO_ORIGIN` and `UNVERIFIED_METADATA`. The combined-heuristic filter (verified-provenance OR name-match) is the empirical adaptation.
 
 ### `1.1.0` — 2026-05-04
 
