@@ -17,6 +17,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Default to least-privilege at the top level. Individual jobs may
+# narrow further. Required for full credit on OpenSSF Scorecard's
+# Token-Permissions check.
+permissions: read-all
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1

@@ -10,16 +10,18 @@ on:
         description: "Tag to release (e.g. v0.1.0)"
         required: true
 
-permissions:
-  contents: write
-  id-token: write       # OIDC for crates.io trusted publisher
-  attestations: write   # SLSA provenance attestations
+# Default to least-privilege at the top level; jobs that need write
+# access narrow on their own. Required for full credit on OpenSSF
+# Scorecard's Token-Permissions check.
+permissions: read-all
 
 jobs:
   create-release:
     name: Create GitHub release
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write       # softprops/action-gh-release creates the draft
     outputs:
       release_id: ${{ steps.create.outputs.id }}
       upload_url: ${{ steps.create.outputs.upload_url }}
@@ -48,6 +50,10 @@ jobs:
     needs: create-release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    permissions:
+      contents: write       # uploads built archives to the release
+      id-token: write       # OIDC for SLSA provenance signing
+      attestations: write   # SLSA provenance attestations
     strategy:
       fail-fast: false
       matrix:
@@ -125,6 +131,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: crates-io
+    permissions:
+      id-token: write       # OIDC for crates.io trusted publisher
     steps:
       - uses: actions/checkout@v4
         with:
