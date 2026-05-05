@@ -32,7 +32,6 @@
 //! # }
 //! ```
 
-use std::collections::BTreeSet;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -98,7 +97,9 @@ impl Client {
 
     /// `GET /v3alpha/projects/github.com%2F{owner}%2F{repo}:packageversions`
     /// — every published version whose source-of-record points at this
-    /// repository. Deduped to the unique `(system, name)` set.
+    /// repository. Filtered down to first-party publications and
+    /// deduped to the unique `(system, name)` set (see
+    /// [`first_party_packages_from_versions`] for the rule).
     ///
     /// We use `v3alpha` rather than `v3` because v3 has no `:packages`
     /// or `:packageversions` method on the project resource — it only
@@ -109,8 +110,11 @@ impl Client {
     /// Returns:
     /// - `Ok(vec)` with packages **sorted by `(system, name)`** for
     ///   deterministic JSON output (per spec §2 and scenario S-102).
-    /// - `Ok(Vec::new())` when deps.dev replies 404 — i.e. the repository
-    ///   has no packages mapped (scenario S-101).
+    /// - `Ok(Vec::new())` when deps.dev replies 404, OR when every
+    ///   returned entry is a transitive mention rather than a
+    ///   first-party publication (scenario S-101 covers both —
+    ///   "no packages mapped" and "everything mapped is just
+    ///   third-party `SOURCE_REPO` noise").
     /// - `Err(_)` on parse failures, transport failures, or non-404 HTTP
     ///   errors (4xx other than 404, or 5xx).
     pub async fn project_packages(&self, owner: &str, repo: &str) -> Result<Vec<PackageRef>> {
@@ -130,16 +134,20 @@ impl Client {
                 return Err(e);
             },
         };
-        let parsed: ProjectPackagesResponse =
-            serde_json::from_slice(&body).context("parse deps.dev project packages response")?;
-        // The :packageversions endpoint returns ONE entry per (system,
-        // name, version) tuple — for any project with more than one
-        // release, the same (system, name) pair shows up dozens or
-        // hundreds of times. Dedupe by (system, name); the BTreeSet
-        // also gives us the deterministic sort `project_packages`
-        // contracts on.
-        let unique: BTreeSet<PackageRef> = parsed.packages.into_iter().collect();
-        Ok(unique.into_iter().collect())
+        // `:packageversions` returns one entry per (system, name,
+        // version) tuple — for any project with more than one release
+        // the same (system, name) pair shows up many times. Parse the
+        // rich wire shape so we can apply the first-party filter
+        // (relationProvenance + name-match + version-count) before
+        // dedup'ing to (system, name). See
+        // [`first_party_packages_from_versions`] for the rule.
+        let parsed: ProjectVersionsResponse = serde_json::from_slice(&body)
+            .context("parse deps.dev project :packageversions response")?;
+        Ok(first_party_packages_from_versions(
+            &parsed.versions,
+            owner,
+            repo,
+        ))
     }
 
     /// `GET /v3/systems/{system}/packages/{name}` — per-package metadata.
@@ -255,6 +263,153 @@ fn encode_project_key(owner: &str, repo: &str) -> String {
         encode_path_segment(owner),
         encode_path_segment(repo)
     )
+}
+
+// ─── First-party publication filter ───────────────────────────────────────
+
+/// `relationProvenance` values that indicate a verified first-party
+/// publication relationship between the project and the package.
+///
+/// Empirical, not aspirational: this list contains only values that
+/// actually appear in our captured fixtures across CARGO/NPM/GO/PYPI.
+/// As of mid-2026, deps.dev's only verified provenance is `GO_ORIGIN`
+/// (the canonical Go module path for the repository); CARGO, NPM,
+/// PYPI, MAVEN entries all come back as `UNVERIFIED_METADATA`.
+///
+/// Adding a new entry to this list should be backed by a fixture
+/// where it actually appears, never speculative — see the
+/// `project_packages_filters_to_first_party_publications` test for
+/// the regression contract.
+const FIRST_PARTY_RELATIONS: &[&str] = &["GO_ORIGIN"];
+
+/// Minimum number of distinct versions a `(system, name)` group must
+/// have to count as a first-party publication.
+///
+/// Why a threshold at all: any GitHub repo with a single git tag is
+/// reachable as a Go module path and therefore appears as a `GO_ORIGIN`
+/// entry on `:packageversions`. Real publishers accumulate dozens or
+/// hundreds of versions over time; demo / example / fork repos that
+/// happen to have one auto-pseudo-version look identical to deps.dev
+/// at the resource level. The version-count threshold is the cleanest
+/// way to discriminate without per-package metadata calls.
+///
+/// `2` is intentionally low — even a brand-new project with a v0.1.0
+/// and a v0.1.1 clears it. We undercount fresh single-release
+/// projects, never overcount transitive mentions.
+const MIN_FIRST_PARTY_VERSIONS: usize = 2;
+
+/// Wire shape of one `versions[]` entry returned by
+/// `:packageversions`. Wider than [`PackageRef`] because we need
+/// `relationProvenance` to apply the first-party filter; the public
+/// type stays minimal.
+#[derive(Debug, Deserialize)]
+struct VersionEntry {
+    #[serde(rename = "versionKey")]
+    version_key: VersionKeyWire,
+    /// Either `relationProvenance` (v3alpha) or `relationType` (legacy
+    /// v3). Optional so older fixtures without the field still parse;
+    /// missing field falls through the filter as not-first-party.
+    #[serde(default, rename = "relationProvenance")]
+    relation_provenance: Option<String>,
+    #[serde(default, rename = "relationType")]
+    relation_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct VersionKeyWire {
+    system: String,
+    name: String,
+    #[serde(default)]
+    #[allow(dead_code)] // surfaced in case a future filter rule needs it
+    version: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProjectVersionsResponse {
+    #[serde(default)]
+    versions: Vec<VersionEntry>,
+}
+
+/// Project the `versions[]` wire array onto a sorted, deduplicated
+/// `Vec<PackageRef>` of the project's first-party publications.
+///
+/// Filter rule: a `(system, name)` group is kept iff
+///
+/// 1. Every entry's relation is in [`FIRST_PARTY_RELATIONS`] (verified
+///    first-party provenance), OR `name` matches the GitHub repo
+///    identifier (case-insensitive equal, or path-suffix match for
+///    Go-module-style names like `github.com/owner/repo`); AND
+/// 2. The group contains at least [`MIN_FIRST_PARTY_VERSIONS`]
+///    distinct versions.
+///
+/// Rule (1) eliminates obvious noise (`@scope/x>y>lodash` style
+/// transitive mentions). Rule (2) eliminates single-tagged demo
+/// repos (`octocat/Hello-World`) that show up as `GO_ORIGIN` simply
+/// because every tagged GitHub repo is reachable as a Go module
+/// path.
+fn first_party_packages_from_versions(
+    versions: &[VersionEntry],
+    owner: &str,
+    repo: &str,
+) -> Vec<PackageRef> {
+    use std::collections::BTreeMap;
+
+    // Bucket by (system, name) → set of distinct versions seen.
+    let mut buckets: BTreeMap<(String, String), Vec<&VersionEntry>> = BTreeMap::new();
+    for v in versions {
+        buckets
+            .entry((v.version_key.system.clone(), v.version_key.name.clone()))
+            .or_default()
+            .push(v);
+    }
+
+    let mut out: Vec<PackageRef> = Vec::new();
+    for ((system, name), entries) in buckets {
+        if entries.len() < MIN_FIRST_PARTY_VERSIONS {
+            continue;
+        }
+        let any_first_party = entries.iter().any(|v| {
+            let rel = v
+                .relation_provenance
+                .as_deref()
+                .or(v.relation_type.as_deref())
+                .unwrap_or("");
+            FIRST_PARTY_RELATIONS.contains(&rel) || name_matches_repo(&name, owner, repo)
+        });
+        if any_first_party {
+            out.push(PackageRef { system, name });
+        }
+    }
+    // BTreeMap iteration is sorted by key, so `out` is already in
+    // canonical (system, name) order.
+    out
+}
+
+/// True if `pkg_name` plausibly identifies a package published by
+/// `owner/repo` on GitHub.
+///
+/// Match patterns observed empirically across the captured fixtures:
+///
+/// - Bare repo-name match (case-insensitive): CARGO/`tokio` from
+///   `tokio-rs/tokio`, PYPI/`django` from `django/django`,
+///   NPM/`lodash` from `lodash/lodash`.
+/// - GitHub path-suffix match (case-insensitive): GO/`github.com/tokio-rs/tokio`
+///   matches owner/repo `tokio-rs/tokio`. The match requires the
+///   **owner** segment too — not just `/repo` — so a transitive NPM
+///   scoped package like `@some-other-author/hello-world` does NOT
+///   accidentally match `octocat/Hello-World`.
+/// - NPM owner-scoped match (case-insensitive): NPM/`@octocat/hello-world`
+///   matches `octocat/Hello-World`.
+fn name_matches_repo(pkg_name: &str, owner: &str, repo: &str) -> bool {
+    let n = pkg_name.to_ascii_lowercase();
+    let o = owner.to_ascii_lowercase();
+    let r = repo.to_ascii_lowercase();
+    if n == r {
+        return true;
+    }
+    let path_suffix = format!("/{o}/{r}");
+    let scope_form = format!("@{o}/{r}");
+    n.ends_with(&path_suffix) || n == scope_form
 }
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
@@ -431,10 +586,15 @@ impl<'de> Deserialize<'de> for PackageInfo {
     }
 }
 
-/// Internal envelope for the project-packages response. deps.dev
-/// `:packageversions` returns `{ "versions": [...] }`; older v3 docs
-/// described `{ "packages": [...] }`. Accept either key so the parser
-/// stays robust against API drift.
+/// Backward-compat envelope used only by the parsing-shape regression
+/// tests in `mod tests` below — accepts either `{"packages":[...]}`
+/// (legacy flat) or `{"versions":[...]}` (v3alpha) and projects the
+/// items through `PackageRef`'s tolerant `Deserialize`. The live
+/// client does NOT use this struct (it parses
+/// `ProjectVersionsResponse` so it can apply the first-party filter)
+/// — kept here so the fixture-shape tests still document the
+/// historical wire shapes.
+#[cfg(test)]
 #[derive(Debug, Default, Deserialize)]
 struct ProjectPackagesResponse {
     #[serde(default, alias = "versions")]
@@ -504,19 +664,28 @@ mod tests {
     /// work under any cwd (CI runners do not always cd into the
     /// package root before invoking cargo test — see E1.7 fix
     /// commit `8c8ed7c`).
-    const FIXTURES: &[(&str, &[(&str, &str)])] = &[
-        // (fixture stem, list of (system, name) the fixture must contain)
-        ("tokio-rs_tokio", &[("CARGO", "tokio")]),
-        ("django_django", &[("PYPI", "django")]),
+    type FixtureRow = (
+        &'static str,
+        &'static str,
+        &'static str,
+        &'static [(&'static str, &'static str)],
+    );
+    const FIXTURES: &[FixtureRow] = &[
+        // (fixture stem, owner, repo, list of (system, name) the
+        // first-party filter must surface)
+        ("tokio-rs_tokio", "tokio-rs", "tokio", &[("CARGO", "tokio")]),
+        ("django_django", "django", "django", &[("PYPI", "django")]),
         (
             "kubernetes_kubernetes",
+            "kubernetes",
+            "kubernetes",
             &[("GO", "github.com/kubernetes/kubernetes")],
         ),
     ];
 
     #[test]
     fn project_packages_response_parses_real_fixtures() {
-        for (stem, must_contain) in FIXTURES {
+        for (stem, _owner, _repo, must_contain) in FIXTURES {
             let path = format!(
                 "{}/tests/fixtures/deps_dev/{stem}.json",
                 env!("CARGO_MANIFEST_DIR")
@@ -541,6 +710,210 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn first_party_filter_yields_expected_packages_on_real_fixtures() {
+        // Validates the full filter pipeline against captured deps.dev
+        // bodies — same fixture set, but routed through
+        // ProjectVersionsResponse + first_party_packages_from_versions
+        // (the path Client::project_packages takes).
+        for (stem, owner, repo, must_contain) in FIXTURES {
+            let path = format!(
+                "{}/tests/fixtures/deps_dev/{stem}.json",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            let body = std::fs::read(&path).unwrap();
+            let parsed: ProjectVersionsResponse = serde_json::from_slice(&body)
+                .unwrap_or_else(|e| panic!("failed to parse {path}: {e}"));
+            let pkgs = first_party_packages_from_versions(&parsed.versions, owner, repo);
+            assert!(
+                !pkgs.is_empty(),
+                "first-party filter zeroed out fixture {stem}; got: {pkgs:?}",
+            );
+            for (sys, name) in *must_contain {
+                assert!(
+                    pkgs.iter().any(|p| {
+                        p.system.eq_ignore_ascii_case(sys) && p.name.eq_ignore_ascii_case(name)
+                    }),
+                    "first-party filter dropped expected ({sys}, {name}) for {stem}; got: {pkgs:?}",
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn first_party_filter_zeros_octocat_hello_world() {
+        // The whole point of this filter is that octocat/Hello-World
+        // — which has 3 GO_ORIGIN entries each with 1 auto-tagged
+        // pseudo-version, plus 36 transitive NPM mentions — comes
+        // back as 0 first-party packages. Captured fixture is
+        // verified to contain exactly that shape.
+        let path = format!(
+            "{}/tests/fixtures/deps_dev/octocat_Hello-World.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let body = std::fs::read(&path).unwrap();
+        let parsed: ProjectVersionsResponse = serde_json::from_slice(&body).unwrap();
+        let pkgs = first_party_packages_from_versions(&parsed.versions, "octocat", "Hello-World");
+        assert!(
+            pkgs.is_empty(),
+            "octocat/Hello-World must yield 0 first-party packages (the demo \
+             repo has only single-pseudo-version GO entries + transitive NPM \
+             mentions); got: {pkgs:?}",
+        );
+    }
+
+    #[test]
+    fn first_party_filter_keeps_verified_provenance_with_enough_versions() {
+        // Two versions of CARGO/tokio under verified GO_ORIGIN
+        // provenance — should survive.
+        let body = br#"{
+            "versions": [
+                {
+                    "versionKey": { "system": "GO", "name": "github.com/o/r", "version": "v1.0.0" },
+                    "relationProvenance": "GO_ORIGIN"
+                },
+                {
+                    "versionKey": { "system": "GO", "name": "github.com/o/r", "version": "v1.1.0" },
+                    "relationProvenance": "GO_ORIGIN"
+                }
+            ]
+        }"#;
+        let parsed: ProjectVersionsResponse = serde_json::from_slice(body).unwrap();
+        let pkgs = first_party_packages_from_versions(&parsed.versions, "o", "r");
+        assert_eq!(pkgs.len(), 1);
+        assert_eq!(pkgs[0].system, "GO");
+    }
+
+    #[test]
+    fn first_party_filter_keeps_unverified_provenance_when_name_matches() {
+        // CARGO/tokio with UNVERIFIED_METADATA but the package name
+        // matches the repo identifier exactly. Real-world tokio case.
+        let body = br#"{
+            "versions": [
+                {
+                    "versionKey": { "system": "CARGO", "name": "tokio", "version": "1.0.0" },
+                    "relationProvenance": "UNVERIFIED_METADATA"
+                },
+                {
+                    "versionKey": { "system": "CARGO", "name": "tokio", "version": "1.1.0" },
+                    "relationProvenance": "UNVERIFIED_METADATA"
+                }
+            ]
+        }"#;
+        let parsed: ProjectVersionsResponse = serde_json::from_slice(body).unwrap();
+        let pkgs = first_party_packages_from_versions(&parsed.versions, "tokio-rs", "tokio");
+        assert_eq!(pkgs.len(), 1);
+        assert_eq!(pkgs[0].name, "tokio");
+    }
+
+    #[test]
+    fn first_party_filter_drops_unverified_provenance_when_name_mismatches() {
+        // CARGO/broker_tokio for a tokio scan: UNVERIFIED_METADATA
+        // and the package name does not match "tokio". Should be
+        // filtered out (this is exactly the noise category that
+        // motivated the filter).
+        let body = br#"{
+            "versions": [
+                {
+                    "versionKey": { "system": "CARGO", "name": "broker_tokio", "version": "0.1.0" },
+                    "relationProvenance": "UNVERIFIED_METADATA"
+                },
+                {
+                    "versionKey": { "system": "CARGO", "name": "broker_tokio", "version": "0.2.0" },
+                    "relationProvenance": "UNVERIFIED_METADATA"
+                }
+            ]
+        }"#;
+        let parsed: ProjectVersionsResponse = serde_json::from_slice(body).unwrap();
+        let pkgs = first_party_packages_from_versions(&parsed.versions, "tokio-rs", "tokio");
+        assert!(
+            pkgs.is_empty(),
+            "transitive mention must be dropped; got: {pkgs:?}"
+        );
+    }
+
+    #[test]
+    fn first_party_filter_drops_single_version_packages() {
+        // Even with a perfect name match AND verified provenance, a
+        // single-version entry is treated as not-yet-published-in-
+        // earnest. This is the rule that gets octocat to 0.
+        let body = br#"{
+            "versions": [
+                {
+                    "versionKey": { "system": "GO", "name": "github.com/o/Hello-World", "version": "v0.0.1" },
+                    "relationProvenance": "GO_ORIGIN"
+                }
+            ]
+        }"#;
+        let parsed: ProjectVersionsResponse = serde_json::from_slice(body).unwrap();
+        let pkgs = first_party_packages_from_versions(&parsed.versions, "o", "Hello-World");
+        assert!(
+            pkgs.is_empty(),
+            "single-version entry must be dropped; got: {pkgs:?}"
+        );
+    }
+
+    #[test]
+    fn first_party_filter_treats_missing_provenance_as_not_first_party() {
+        // Older deps.dev responses or non-package endpoints may not
+        // include relationProvenance. Treat missing as not first-party
+        // rather than panicking — safer to undercount than to count
+        // unknown entries.
+        let body = br#"{
+            "versions": [
+                { "versionKey": { "system": "CARGO", "name": "x", "version": "1.0.0" } },
+                { "versionKey": { "system": "CARGO", "name": "x", "version": "1.1.0" } }
+            ]
+        }"#;
+        let parsed: ProjectVersionsResponse = serde_json::from_slice(body).unwrap();
+        // repo doesn't match name `x`, so name-match also fails →
+        // entry has neither verified provenance nor name-match → dropped.
+        let pkgs = first_party_packages_from_versions(&parsed.versions, "owner-y", "y");
+        assert!(
+            pkgs.is_empty(),
+            "missing provenance + no name-match → drop; got: {pkgs:?}"
+        );
+    }
+
+    #[test]
+    fn name_matches_repo_owner_aware() {
+        // GO module names have the `github.com/owner/repo` shape; the
+        // matcher requires both owner AND repo to match (no plain
+        // `/repo` suffix-only match — that would over-match e.g.
+        // `@nloyyjuqc/hello-world` against `octocat/Hello-World`).
+        assert!(name_matches_repo(
+            "github.com/tokio-rs/tokio",
+            "tokio-rs",
+            "tokio"
+        ));
+        assert!(name_matches_repo(
+            "github.com/Kubernetes/Kubernetes",
+            "kubernetes",
+            "kubernetes"
+        ));
+        // NPM scope-form match.
+        assert!(name_matches_repo(
+            "@octocat/hello-world",
+            "octocat",
+            "Hello-World"
+        ));
+        // Plain match still works.
+        assert!(name_matches_repo("django", "django", "django"));
+        // Negative cases — wrong owner, wrong scope.
+        assert!(!name_matches_repo("broker_tokio", "tokio-rs", "tokio"));
+        assert!(!name_matches_repo("tokio_macros", "tokio-rs", "tokio"));
+        assert!(!name_matches_repo(
+            "@nloyyjuqc/hello-world",
+            "octocat",
+            "Hello-World"
+        ));
+        assert!(!name_matches_repo(
+            "github.com/someone-else/Hello-World",
+            "octocat",
+            "Hello-World"
+        ));
     }
 
     #[test]

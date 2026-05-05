@@ -292,7 +292,10 @@ const PROMETHEUS_SCORECARD: &str = r#"{
 }"#;
 
 const PROMETHEUS_DEPS_DEV_PACKAGES: &str = r#"{
-    "packages":[{"system":"GO","name":"github.com/prometheus/prometheus"}]
+    "versions":[
+        {"versionKey":{"system":"GO","name":"github.com/prometheus/prometheus","version":"v2.50.0"},"relationProvenance":"GO_ORIGIN"},
+        {"versionKey":{"system":"GO","name":"github.com/prometheus/prometheus","version":"v2.51.0"},"relationProvenance":"GO_ORIGIN"}
+    ]
 }"#;
 
 const PROMETHEUS_GO_PACKAGE: &str = r#"{
@@ -488,7 +491,10 @@ const CARGO_SCORECARD: &str = r#"{
 }"#;
 
 const CARGO_DEPS_DEV_PACKAGES: &str = r#"{
-    "packages":[{"system":"CARGO","name":"cargo"}]
+    "versions":[
+        {"versionKey":{"system":"CARGO","name":"cargo","version":"0.80.0"},"relationProvenance":"UNVERIFIED_METADATA"},
+        {"versionKey":{"system":"CARGO","name":"cargo","version":"0.81.0"},"relationProvenance":"UNVERIFIED_METADATA"}
+    ]
 }"#;
 
 const CARGO_PACKAGE: &str = r#"{

@@ -41,8 +41,15 @@ async fn s001_project_packages_returns_sorted_vec() {
         .respond_with(
             ResponseTemplate::new(200)
                 .insert_header("Content-Type", "application/json")
+                // Two versions with verified GO_ORIGIN provenance — clears
+                // the first-party filter (≥2 versions per (system, name)
+                // AND verified provenance OR name-match; this entry has
+                // both).
                 .set_body_string(
-                    r#"{"versions":[{"versionKey":{"system":"GO","name":"github.com/prometheus/prometheus","version":"v2.45.0"}}]}"#,
+                    r#"{"versions":[
+                        {"versionKey":{"system":"GO","name":"github.com/prometheus/prometheus","version":"v2.45.0"},"relationProvenance":"GO_ORIGIN"},
+                        {"versionKey":{"system":"GO","name":"github.com/prometheus/prometheus","version":"v2.46.0"},"relationProvenance":"GO_ORIGIN"}
+                    ]}"#,
                 ),
         )
         .expect(1)
@@ -65,7 +72,9 @@ async fn s001b_project_packages_dedupes_versionkey_entries() {
     // Real-world :packageversions returns one entry per (system, name,
     // version) tuple. For a project with 50 releases of one package,
     // there are 50 entries with the same (system, name). The client
-    // must dedupe to the unique (system, name) set.
+    // must dedupe to the unique (system, name) set, AND apply the
+    // first-party filter — `tokio-util` has only 1 version here so
+    // it falls below the version-count threshold and gets dropped.
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path(
@@ -76,10 +85,10 @@ async fn s001b_project_packages_dedupes_versionkey_entries() {
                 .insert_header("Content-Type", "application/json")
                 .set_body_string(
                     r#"{"versions":[
-                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.0.0"}},
-                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.1.0"}},
-                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.2.0"}},
-                        {"versionKey":{"system":"CARGO","name":"tokio-util","version":"0.7.0"}}
+                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.0.0"},"relationProvenance":"UNVERIFIED_METADATA"},
+                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.1.0"},"relationProvenance":"UNVERIFIED_METADATA"},
+                        {"versionKey":{"system":"CARGO","name":"tokio","version":"1.2.0"},"relationProvenance":"UNVERIFIED_METADATA"},
+                        {"versionKey":{"system":"CARGO","name":"tokio-util","version":"0.7.0"},"relationProvenance":"UNVERIFIED_METADATA"}
                     ]}"#,
                 ),
         )
@@ -91,17 +100,12 @@ async fn s001b_project_packages_dedupes_versionkey_entries() {
     let packages = client.project_packages("tokio-rs", "tokio").await.unwrap();
     assert_eq!(
         packages,
-        vec![
-            PackageRef {
-                system: "CARGO".into(),
-                name: "tokio".into()
-            },
-            PackageRef {
-                system: "CARGO".into(),
-                name: "tokio-util".into()
-            },
-        ],
-        "must dedupe to unique (system, name) and stay sorted",
+        vec![PackageRef {
+            system: "CARGO".into(),
+            name: "tokio".into()
+        }],
+        "tokio (3 versions, name-match) survives the filter; tokio-util \
+         (1 version) falls below MIN_FIRST_PARTY_VERSIONS",
     );
 }
 
@@ -169,8 +173,19 @@ async fn s101_project_endpoint_404_returns_empty_vec() {
 #[tokio::test]
 async fn s102_packages_sorted_by_system_then_name() {
     let server = MockServer::start().await;
-    // Upstream returns packages in arbitrary order: (NPM,b), (GO,a), (NPM,a).
-    // Client must sort to: (GO,a), (NPM,a), (NPM,b).
+    // Upstream returns packages in arbitrary order across (system, name)
+    // tuples; we mock 2 versions per package so each clears
+    // MIN_FIRST_PARTY_VERSIONS and the filter accepts them all (the
+    // package names match the repo name "multi" via the "a" / "b" /
+    // "multi" sub-cases below). Provenance is GO_ORIGIN for the GO
+    // entry (verified) and UNVERIFIED_METADATA + name-match for the
+    // NPM entries.
+    //
+    // Owner-aware name-match means we use the repo identifier "multi"
+    // for the lookup and a synthetic "a" / "b" name won't match.
+    // To keep the original sort intent, switch the test names to the
+    // repo identifier "multi" plus "multi-extra" and exercise the
+    // sort across (GO, multi), (NPM, multi), (NPM, multi-extra).
     Mock::given(method("GET"))
         .and(path(
             "/v3alpha/projects/github.com%2Facme%2Fmulti:packageversions",
@@ -180,9 +195,12 @@ async fn s102_packages_sorted_by_system_then_name() {
                 .insert_header("Content-Type", "application/json")
                 .set_body_string(
                     r#"{"versions":[
-                        {"versionKey":{"system":"NPM","name":"b","version":"1.0.0"}},
-                        {"versionKey":{"system":"GO","name":"a","version":"v1.0.0"}},
-                        {"versionKey":{"system":"NPM","name":"a","version":"1.0.0"}}
+                        {"versionKey":{"system":"NPM","name":"multi","version":"1.0.0"},"relationProvenance":"UNVERIFIED_METADATA"},
+                        {"versionKey":{"system":"NPM","name":"multi","version":"1.1.0"},"relationProvenance":"UNVERIFIED_METADATA"},
+                        {"versionKey":{"system":"GO","name":"github.com/acme/multi","version":"v1.0.0"},"relationProvenance":"GO_ORIGIN"},
+                        {"versionKey":{"system":"GO","name":"github.com/acme/multi","version":"v1.1.0"},"relationProvenance":"GO_ORIGIN"},
+                        {"versionKey":{"system":"NPM","name":"@acme/multi","version":"1.0.0"},"relationProvenance":"UNVERIFIED_METADATA"},
+                        {"versionKey":{"system":"NPM","name":"@acme/multi","version":"1.1.0"},"relationProvenance":"UNVERIFIED_METADATA"}
                     ]}"#,
                 ),
         )
@@ -201,15 +219,15 @@ async fn s102_packages_sorted_by_system_then_name() {
         vec![
             PackageRef {
                 system: "GO".to_string(),
-                name: "a".to_string(),
+                name: "github.com/acme/multi".to_string(),
             },
             PackageRef {
                 system: "NPM".to_string(),
-                name: "a".to_string(),
+                name: "@acme/multi".to_string(),
             },
             PackageRef {
                 system: "NPM".to_string(),
-                name: "b".to_string(),
+                name: "multi".to_string(),
             },
         ],
         "packages must be sorted by (system, name) for deterministic output",
