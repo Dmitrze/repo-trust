@@ -213,6 +213,14 @@ All contributors are listed in `CONTRIBUTORS.md` (auto-generated from git histor
 
 ---
 
+## Repository administration
+
+A handful of repository settings can't be expressed in CI workflows because they require admin-level GitHub API access. The ones we care about are scripted under `scripts/`:
+
+- [`scripts/enable-branch-protection.sh`](scripts/enable-branch-protection.sh) — enables branch protection on `main` for the OpenSSF Scorecard Branch-Protection check (required CI status checks, no force-pushes, no deletions). Idempotent. Re-run it whenever the list of required CI checks changes (e.g. new job in `.github/workflows/ci.yml`) so the protection stays in sync. Solo-maintainer compromise: `enforce_admins: false` lets the maintainer keep direct pushes to `main` while still receiving Scorecard credit.
+
+---
+
 ## Maintainers
 
 Currently a single maintainer ([@Dmitrze](https://github.com/Dmitrze)). We are actively recruiting co-maintainers — see [`docs/governance.md`](docs/governance.md). The bus factor is currently 1, which is exactly the kind of risk we measure in our own Maintainer Health module. Help us improve it.
