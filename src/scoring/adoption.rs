@@ -286,6 +286,30 @@ fn verdict_from_score(s: u8) -> Verdict {
 /// shows the maintainer cared enough to write user-facing docs.
 const MEDIUM_DOC_THRESHOLD: f64 = 0.50;
 
+/// Widened "documented" predicate for the confidence rule (scoring
+/// 1.1.1). A repository qualifies if EITHER:
+///
+/// 1. `documentation_maturity_score >= MEDIUM_DOC_THRESHOLD` — the
+///    original 1.1.0 floor (covers heavy-doc repos with long READMEs
+///    and `docs/` trees); OR
+/// 2. The repository has a README **and** at least one of `docs/` or
+///    `examples/` — the idiomatic library-project layout where the
+///    root README intentionally points at deeper material rather
+///    than reproducing it inline (clap-rs/clap, serde-rs/serde,
+///    tower-rs/tower follow this pattern).
+///
+/// (1) covers heavy-doc projects; (2) covers library projects whose
+/// raw doc-maturity score under-rates because the doc weight is
+/// concentrated in `examples/` (0.20) or a short root README (0.20).
+/// The doc-maturity *score* itself is unchanged — only the boolean
+/// used by the confidence rule widens.
+fn is_well_documented(features: &AdoptionFeatures) -> bool {
+    if features.documentation_maturity_score >= MEDIUM_DOC_THRESHOLD {
+        return true;
+    }
+    features.has_readme && (features.has_docs_dir || features.has_examples_dir)
+}
+
 /// Adoption Signals confidence (scoring v1.1.0+).
 ///
 /// deps.dev v3 no longer exposes `weeklyDownloads` (verified empty
@@ -313,7 +337,7 @@ fn compute_confidence(features: &AdoptionFeatures, _t: &AdoptionThresholds) -> C
         return Confidence::Low;
     }
     let has_packages = features.package_systems_count > 0;
-    let well_documented = features.documentation_maturity_score >= MEDIUM_DOC_THRESHOLD;
+    let well_documented = is_well_documented(features);
     let archived = features.archived;
 
     match (has_packages, archived, well_documented) {
@@ -672,6 +696,80 @@ mod tests {
             .find(|e| e.code == "ecosystem_coverage")
             .expect("ecosystem_coverage evidence");
         assert!(matches!(item.verdict, Verdict::Neutral));
+    }
+
+    // ─── 1.1.1 widened "documented" predicate ──────────────────────────────
+
+    #[test]
+    fn well_documented_when_doc_maturity_above_threshold() {
+        let mut f = baseline();
+        f.documentation_maturity_score = 0.50;
+        assert!(is_well_documented(&f));
+    }
+
+    #[test]
+    fn well_documented_when_readme_and_examples_dir() {
+        // The clap-rs/clap pattern: short README, no docs/, but
+        // examples/. doc_maturity_score 0.40 (README 0.20 + examples
+        // 0.20) is below the floor; widened predicate still accepts.
+        let mut f = baseline();
+        f.documentation_maturity_score = 0.40;
+        f.has_readme = true;
+        f.has_docs_dir = false;
+        f.has_examples_dir = true;
+        assert!(is_well_documented(&f));
+    }
+
+    #[test]
+    fn well_documented_when_readme_and_docs_dir() {
+        let mut f = baseline();
+        f.documentation_maturity_score = 0.45;
+        f.has_readme = true;
+        f.has_docs_dir = true;
+        f.has_examples_dir = false;
+        assert!(is_well_documented(&f));
+    }
+
+    #[test]
+    fn not_well_documented_when_only_short_readme() {
+        let mut f = baseline();
+        f.documentation_maturity_score = 0.20;
+        f.has_readme = true;
+        f.has_docs_dir = false;
+        f.has_examples_dir = false;
+        assert!(!is_well_documented(&f));
+    }
+
+    #[test]
+    fn not_well_documented_when_no_readme() {
+        // docs/ + examples/ without a README is implausible in
+        // practice (you can't navigate the project from the root) —
+        // the widened predicate requires has_readme to anchor either
+        // sub-directory branch.
+        let mut f = baseline();
+        f.documentation_maturity_score = 0.30;
+        f.has_readme = false;
+        f.has_docs_dir = true;
+        f.has_examples_dir = true;
+        assert!(!is_well_documented(&f));
+    }
+
+    #[test]
+    fn confidence_high_for_clap_like_pattern() {
+        // The actual reason this calibration tweak exists — verify
+        // end-to-end that compute_confidence promotes the clap-rs/clap
+        // shape (short README + examples/ but no docs/, doc-maturity
+        // 0.40, one ecosystem, not archived) to High.
+        let mut f = baseline();
+        f.package_systems = vec!["CARGO".into()];
+        f.package_systems_count = 1;
+        f.archived = false;
+        f.documentation_maturity_score = 0.40;
+        f.has_readme = true;
+        f.has_docs_dir = false;
+        f.has_examples_dir = true;
+        let (r, _) = score(&f, &AdoptionThresholds::v1());
+        assert_eq!(r.confidence, Confidence::High);
     }
 
     #[test]
