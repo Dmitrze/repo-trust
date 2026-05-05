@@ -99,7 +99,7 @@ impl Client {
     /// — every published version whose source-of-record points at this
     /// repository. Filtered down to first-party publications and
     /// deduped to the unique `(system, name)` set (see
-    /// [`first_party_packages_from_versions`] for the rule).
+    /// the private `first_party_packages_from_versions` helper for the rule).
     ///
     /// We use `v3alpha` rather than `v3` because v3 has no `:packages`
     /// or `:packageversions` method on the project resource — it only
@@ -140,7 +140,7 @@ impl Client {
         // rich wire shape so we can apply the first-party filter
         // (relationProvenance + name-match + version-count) before
         // dedup'ing to (system, name). See
-        // [`first_party_packages_from_versions`] for the rule.
+        // the private `first_party_packages_from_versions` helper for the rule.
         let parsed: ProjectVersionsResponse = serde_json::from_slice(&body)
             .context("parse deps.dev project :packageversions response")?;
         Ok(first_party_packages_from_versions(
