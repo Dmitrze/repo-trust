@@ -5,7 +5,13 @@ version: "1.0"
 # forwards qodana.yaml's `image:` field directly to `--image`, so
 # pinning the Rust linter image here is the only configuration the
 # CLI accepts.
-image: jetbrains/qodana-rust:2025.3
+#
+# `jetbrains/qodana-rust` only publishes two tags on Docker Hub: `latest`
+# and `2026.1-eap` (Early Access Program — the Rust linter is still in
+# preview). There is no `2025.3` or `2026.1` stable tag. Pinning to the
+# EAP tag keeps the build reproducible against a specific release; revisit
+# once a stable tag ships.
+image: jetbrains/qodana-rust:2026.1-eap
 
 profile:
   name: qodana.recommended
