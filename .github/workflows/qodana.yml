@@ -44,9 +44,12 @@ jobs:
       - name: Qodana Scan
         uses: JetBrains/qodana-action@89eb4357efd2b52e639f3216e63edaf33b82622b  # v2025.3
         with:
-          args: |
-            --linter
-            jetbrains/qodana-rust:2026.1
+          # The Rust linter is selected by qodana.yaml. The action's
+          # `args:` is left empty: passing `--linter` with a Docker
+          # image path was rejected by the 2025.3 CLI ("Unrecognized
+          # '--linter' value … please use '--image' instead"). Letting
+          # qodana.yaml drive the configuration keeps a single source
+          # of truth.
           pr-mode: false
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}

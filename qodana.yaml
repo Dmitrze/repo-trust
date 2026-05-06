@@ -1,10 +1,15 @@
 version: "1.0"
 
-linter: jetbrains/qodana-rust:2026.1
+# The `linter:` field is the short name Qodana CLI 2025.3+ accepts
+# (`rust`, `python`, `js`, etc.). Use `image:` if pinning a specific
+# Docker tag becomes necessary; the two fields are mutually exclusive.
+linter: rust
 
 profile:
   name: qodana.recommended
 
+# Permissive on first-run findings so the workflow stays advisory and
+# doesn't break the build while we triage the initial inspection set.
 failureConditions:
   severityThresholds:
     any: 1000
