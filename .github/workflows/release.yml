@@ -114,6 +114,32 @@ jobs:
             repo-trust-${{ matrix.target }}.tar.gz
             repo-trust-${{ matrix.target }}.zip
         continue-on-error: true
+      - name: Install Cosign
+        # Sigstore keyless signing via OIDC. Pairs with attest-build-
+        # provenance above: SLSA provenance proves *how* it was built;
+        # cosign signs prove *who* (which workflow identity) cut the
+        # release. See docs/RELEASE_VERIFICATION.md.
+        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5  # v3.10.1
+      - name: Sign archive (Unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign-blob --yes \
+            --output-signature repo-trust-${{ matrix.target }}.tar.gz.sig \
+            --output-certificate repo-trust-${{ matrix.target }}.tar.gz.pem \
+            repo-trust-${{ matrix.target }}.tar.gz
+      - name: Sign archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign-blob --yes `
+            --output-signature repo-trust-${{ matrix.target }}.zip.sig `
+            --output-certificate repo-trust-${{ matrix.target }}.zip.pem `
+            repo-trust-${{ matrix.target }}.zip
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
@@ -121,8 +147,12 @@ jobs:
           files: |
             repo-trust-${{ matrix.target }}.tar.gz
             repo-trust-${{ matrix.target }}.tar.gz.sha256
+            repo-trust-${{ matrix.target }}.tar.gz.sig
+            repo-trust-${{ matrix.target }}.tar.gz.pem
             repo-trust-${{ matrix.target }}.zip
             repo-trust-${{ matrix.target }}.zip.sha256
+            repo-trust-${{ matrix.target }}.zip.sig
+            repo-trust-${{ matrix.target }}.zip.pem
           fail_on_unmatched_files: false
 
   publish-crate:

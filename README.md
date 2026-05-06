@@ -72,6 +72,8 @@ Requires Rust 1.75+. Install Rust via [rustup.rs](https://rustup.rs/) if you don
 - 🐳 Docker image (`ghcr.io/dmitrze/repo-trust`)
 - 📥 Standalone binaries for Linux x86_64/arm64, macOS arm64, Windows x86_64
 
+Released binaries ship with SLSA provenance and Sigstore keyless signatures — see [docs/RELEASE_VERIFICATION.md](docs/RELEASE_VERIFICATION.md) for verification steps.
+
 ### Recommended setup
 
 ```bash
