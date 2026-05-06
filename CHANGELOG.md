@@ -10,6 +10,32 @@ change log.
 
 ---
 
+## [0.1.1] — 2026-05-06
+
+### Security
+
+- Bumped `indicatif` 0.17 → 0.18 to address **RUSTSEC-2025-0119**.
+- GitHub Actions workflows now follow least-privilege token permissions
+  (top-level `read-all` with per-job write blocks).
+- All GitHub Actions pinned to commit SHAs (with original tags as
+  trailing comments for Dependabot).
+- Release artifacts now signed with **cosign keyless OIDC**.
+  Verification command and procedure documented in
+  [`docs/RELEASE_VERIFICATION.md`](docs/RELEASE_VERIFICATION.md).
+- Branch protection bootstrap script added at
+  [`scripts/enable-branch-protection.sh`](scripts/enable-branch-protection.sh).
+
+### CI
+
+- Added Semgrep SAST workflow
+  ([`.github/workflows/semgrep.yml`](.github/workflows/semgrep.yml))
+  running the `p/rust` and `p/security-audit` rulesets in a pinned
+  Docker container, with SARIF upload to GitHub code-scanning.
+- Tarpaulin line coverage stable at **89.34%**; clippy::pedantic,
+  cargo-deny, cargo-audit, rustdoc `-D warnings` all green.
+
+---
+
 ## [0.1.0] — 2026-05-04
 
 First public alpha. All five trust modules ship end-to-end with a
@@ -84,4 +110,6 @@ misconduct. False positives can occur — please report calibration
 concerns through the
 [calibration template](.github/ISSUE_TEMPLATE/calibration.yml).
 
+[Unreleased]: https://github.com/Dmitrze/repo-trust/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Dmitrze/repo-trust/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Dmitrze/repo-trust/releases/tag/v0.1.0
