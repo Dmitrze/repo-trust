@@ -87,3 +87,4 @@ SOUL.local.md
 node_modules/
 .next/
 .turbo/
+.claude/
