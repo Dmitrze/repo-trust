@@ -50,6 +50,15 @@ jobs:
     needs: create-release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    # Intel macOS (macos-15-intel) is best-effort: the legacy macos-13
+    # image was retired by GitHub on 2025-12-08, and the replacement
+    # Intel runner pool is sized for legacy migration, not for fan-out
+    # release matrices. Apple Silicon, Linux x86_64/aarch64, and
+    # Windows remain mandatory; an Intel macOS hiccup must not block
+    # the release. The Intel matrix entry sets `best-effort: true`
+    # (see matrix include below) which is bridged to the GitHub-Actions
+    # job-level `continue-on-error` flag here.
+    continue-on-error: ${{ matrix.best-effort == true }}
     permissions:
       contents: write       # uploads built archives to the release
       id-token: write       # OIDC for SLSA provenance signing
@@ -65,8 +74,13 @@ jobs:
             os: ubuntu-latest
             cross: true
           - target: x86_64-apple-darwin
-            os: macos-13
+            # macos-15-intel is the current supported Intel runner per
+            # github.blog/changelog/2025-09-19-github-actions-macos-13-
+            # runner-image-is-closing-down. Available until August 2027.
+            # macos-14 is arm64, NOT a substitute for x86_64.
+            os: macos-15-intel
             cross: false
+            best-effort: true
           - target: aarch64-apple-darwin
             os: macos-latest
             cross: false
