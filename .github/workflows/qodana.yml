@@ -1,0 +1,59 @@
+name: Qodana
+
+# JetBrains Qodana for Rust — primary static analysis tool. Runs on push
+# to main and weekly. SARIF uploads to GitHub code-scanning.
+#
+# Why Qodana (not CodeQL or static Semgrep):
+#   - CodeQL doesn't support Rust.
+#   - OpenSSF Scorecard's SAST detector statically recognises Qodana
+#     (alongside CodeQL, Sonar, Snyk, Pysa) but does NOT statically
+#     recognise Semgrep — Semgrep is only credited via PR check-suites,
+#     which a solo direct-push workflow does not produce.
+#   - JetBrains/qodana-action is on Scorecard's allowlist; this workflow
+#     therefore moves the SAST check off 0.
+#
+# Semgrep stays on as a secondary signal; both upload to code-scanning.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    # Monday 06:00 UTC — same cadence as Semgrep + Scorecard.
+    - cron: '0 6 * * 1'
+
+permissions: read-all
+
+jobs:
+  qodana:
+    name: Qodana for Rust
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      security-events: write
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Qodana Scan
+        uses: JetBrains/qodana-action@89eb4357efd2b52e639f3216e63edaf33b82622b  # v2025.3
+        with:
+          args: |
+            --linter
+            jetbrains/qodana-rust:2026.1
+          pr-mode: false
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+
+      - name: Upload SARIF to GitHub code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@0daab03d71ff584ef619d027a3fd9146679c5d84  # v3
+        with:
+          sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
+          category: qodana

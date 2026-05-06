@@ -1,0 +1,10 @@
+version: "1.0"
+
+linter: jetbrains/qodana-rust:2026.1
+
+profile:
+  name: qodana.recommended
+
+failureConditions:
+  severityThresholds:
+    any: 1000
