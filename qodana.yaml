@@ -1,9 +1,11 @@
 version: "1.0"
 
-# The `linter:` field is the short name Qodana CLI 2025.3+ accepts
-# (`rust`, `python`, `js`, etc.). Use `image:` if pinning a specific
-# Docker tag becomes necessary; the two fields are mutually exclusive.
-linter: rust
+# Qodana CLI 2025.3+ rejects `--linter` for any value (short name or
+# image path) and requires `--image` for the Docker image. The action
+# forwards qodana.yaml's `image:` field directly to `--image`, so
+# pinning the Rust linter image here is the only configuration the
+# CLI accepts.
+image: jetbrains/qodana-rust:2025.3
 
 profile:
   name: qodana.recommended
