@@ -8,7 +8,8 @@
 [![Rust 1.75+](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org/)
 [![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](CHANGELOG.md)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Dmitrze/repo-trust/badge)](https://scorecard.dev/viewer/?uri=github.com/Dmitrze/repo-trust)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Dmitrze/repo-trust/badge)]
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12761/badge)](https://www.bestpractices.dev/projects/12761)
 
 [**Install**](#install) · [**Quick start**](#quick-start) · [**Methodology**](docs/methodology.md) · [**Sponsor**](#sponsorship)
 
