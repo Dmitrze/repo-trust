@@ -129,11 +129,6 @@ jobs:
         uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998  # v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Mirror the ignore in deny.toml — RUSTSEC-2025-0119 is an
-          # unmaintained-only advisory for `number_prefix`, pulled in
-          # transitively via `indicatif`. No safe upgrade available.
-          # Review by 2026-11-01.
-          ignore: RUSTSEC-2025-0119
 
   coverage:
     name: tarpaulin (coverage ≥75%)
