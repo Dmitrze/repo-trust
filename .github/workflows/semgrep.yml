@@ -1,0 +1,71 @@
+name: Semgrep SAST
+
+# Static Application Security Testing via Semgrep. Runs the Rust ruleset
+# (p/rust) plus the curated security-audit pack (p/security-audit) and
+# uploads SARIF to GitHub code scanning. Warning-only — does NOT fail
+# the build (no --error) so that a solo maintainer is not blocked by
+# noisy advisory matches; severities are triaged in the code-scanning UI.
+#
+# Why this satisfies OpenSSF Scorecard's SAST check:
+#   - SARIF results are uploaded via github/codeql-action/upload-sarif,
+#     which Scorecard recognises as a SAST integration.
+#   - Action references are SHA-pinned (Pinned-Dependencies check).
+#   - Default token permissions are read-all (Token-Permissions check);
+#     only the SARIF-upload job widens to security-events: write.
+#
+# Why this isn't a GitHub Action:
+#   - semgrep/semgrep-action is archived. The recommended path is to
+#     install the Semgrep Python CLI directly, which keeps the supply
+#     chain shallow (no third-party action to pin) while still emitting
+#     SARIF.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['**']
+  schedule:
+    # Monday 06:00 UTC — weekly cadence, off-peak.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  semgrep:
+    name: Semgrep (p/rust + p/security-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
+
+      - name: Install Semgrep
+        # Use the OS-provided Python (ubuntu-latest ships 3.x). Pinning
+        # a specific Semgrep release avoids surprise rule-pack changes.
+        run: |
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user 'semgrep==1.99.0'
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run Semgrep
+        # No --error: warning-only while the team is solo. Findings land
+        # in the code-scanning UI for triage instead of blocking PRs.
+        run: |
+          semgrep \
+            --config=p/rust \
+            --config=p/security-audit \
+            --sarif --output=semgrep.sarif \
+            --metrics=off
+
+      - name: Upload SARIF to code scanning
+        # Same SHA as scorecard.yml — keeps the codeql-action pin in sync.
+        uses: github/codeql-action/upload-sarif@0daab03d71ff584ef619d027a3fd9146679c5d84  # v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+        if: always()
