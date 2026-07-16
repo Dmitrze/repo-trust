@@ -6,12 +6,18 @@ version: "1.0"
 # pinning the Rust linter image here is the only configuration the
 # CLI accepts.
 #
-# `jetbrains/qodana-rust` only publishes two tags on Docker Hub: `latest`
-# and `2026.1-eap` (Early Access Program — the Rust linter is still in
-# preview). There is no `2025.3` or `2026.1` stable tag. Pinning to the
-# EAP tag keeps the build reproducible against a specific release; revisit
-# once a stable tag ships.
-image: jetbrains/qodana-rust:2026.1-eap
+# ⚠ EAP images expire. `jetbrains/qodana-rust` is still Early Access —
+# every EAP image carries a built-in evaluation license with a fixed
+# expiry date. When it lapses, scans fail with "qodana scan failed with
+# exit code 1" (and the SARIF upload step then fails with "Path does
+# not exist"). JetBrains publishes the successor image shortly before
+# the old one expires, so the fix is always: bump this tag to the
+# newest `-eap` on hub.docker.com/r/jetbrains/qodana-rust/tags.
+# Do NOT switch to `latest` — JetBrains does not reliably re-point it
+# (as of 2026-07 `latest` still equals the expired 2026.1-eap digest).
+# History: 2026.1-eap expired ~2026-07-05 → bumped to 2026.2-eap.
+# Revisit and pin properly once a stable (non-EAP) tag ships.
+image: jetbrains/qodana-rust:2026.2-eap
 
 profile:
   name: qodana.recommended
