@@ -80,7 +80,7 @@ figment = { version = "0.10", features = ["toml", "env"] }
 dirs = "5.0"
 
 # Web (optional, behind feature flag)
-axum = { version = "0.7", optional = true }
+axum = { version = "0.8", optional = true }
 tower-http = { version = "0.5", features = ["fs", "trace"], optional = true }
 askama = { version = "0.12", optional = true }
 rust-embed = { version = "8.5", optional = true }
